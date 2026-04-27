@@ -75,4 +75,12 @@ jobs:
       - name: Build rsync
         run: |
           echo "Dependencies are ready. Proceeding with MSYS2 build..."
-          # Your build steps using the workspace/git-sdk-64 environment and workspace/rsync source go here.
+          
+          # Make the build script executable
+          chmod +x scripts/build-rsync.sh
+          
+          # Convert GITHUB_WORKSPACE to a path the MSYS2 environment understands
+          WORKSPACE_UNIX=$(cygpath -u "${{ github.workspace }}")
+          
+          # Execute the build script inside the git-sdk-64 MSYS2 environment
+          workspace/git-sdk-64/usr/bin/bash.exe -lc "$WORKSPACE_UNIX/scripts/build-rsync.sh $WORKSPACE_UNIX/workspace/rsync"
