@@ -18,10 +18,10 @@ jobs:
       run:
         shell: bash
     steps:
-      - name: Check out repository code
+      - name: Check out repository
         uses: actions/checkout@v4
 
-      - name: Determine Target Git Version
+      - name: Determine target Git version
         id: git-version
         run: |
           if [[ -n "${{ github.event.inputs.git_version }}" ]]; then
@@ -32,40 +32,40 @@ jobs:
             # Strip the 'v' prefix if present
             GIT_VER=${GIT_VER#v}
           fi
-          echo "Target Git Version: $GIT_VER"
+          echo "Target Git version: $GIT_VER"
           echo "version=$GIT_VER" >> $GITHUB_OUTPUT
 
       - name: Clone Dependencies
         run: |
           mkdir -p workspace
           cd workspace
-          
+
           echo "Cloning build-extra (shallow)..."
           git clone --depth 1 https://github.com/git-for-windows/build-extra.git
-          
+
           echo "Cloning git-sdk-64 (shallow history, but enough to search recent commits)..."
           # We need some history to find the commit by date, so depth=50 is safer than 1.
           git clone --depth 100 https://github.com/git-for-windows/git-sdk-64.git
-          
+
           echo "Cloning rsync (shallow)..."
           git clone --depth 1 https://github.com/RsyncProject/rsync.git
 
-      - name: Resolve and Checkout SDK Commit
+      - name: Resolve and checkout SDK Commit
         run: |
           GIT_VER="${{ steps.git-version.outputs.version }}"
-          
+
           # Run the script to find the commit
           # It outputs information, we capture the SDK Commit line
           OUTPUT=$(./scripts/find-sdk-commit.sh "$GIT_VER" workspace)
           echo "$OUTPUT"
-          
+
           SDK_COMMIT=$(echo "$OUTPUT" | grep "^SDK Commit:" | awk '{print $3}')
-          
+
           if [[ -z "$SDK_COMMIT" ]]; then
             echo "Failed to resolve SDK commit."
             exit 1
           fi
-          
+
           echo "Checking out git-sdk-64 at commit $SDK_COMMIT"
           cd workspace/git-sdk-64
           # If the commit is deep, we might need to fetch it specifically
@@ -75,12 +75,13 @@ jobs:
       - name: Build rsync
         run: |
           echo "Dependencies are ready. Proceeding with MSYS2 build..."
-          
+
           # Make the build script executable
           chmod +x scripts/build-rsync.sh
-          
+
           # Convert GITHUB_WORKSPACE to a path the MSYS2 environment understands
           WORKSPACE_UNIX=$(cygpath -u "${{ github.workspace }}")
-          
+
           # Execute the build script inside the git-sdk-64 MSYS2 environment
-          workspace/git-sdk-64/usr/bin/bash.exe -lc "$WORKSPACE_UNIX/scripts/build-rsync.sh $WORKSPACE_UNIX/workspace/rsync"
+          # Setting MSYSTEM=MSYS is critical so the SDK uses /usr/bin tools instead of inheriting MINGW64 from the runner.
+          MSYSTEM=MSYS workspace/git-sdk-64/usr/bin/bash.exe -lc "$WORKSPACE_UNIX/scripts/build-rsync.sh $WORKSPACE_UNIX/workspace/rsync"
