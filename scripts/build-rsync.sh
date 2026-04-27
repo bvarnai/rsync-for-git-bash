@@ -40,6 +40,11 @@ main() {
   pacman -Sy --noconfirm pkg-config openssl-devel libxxhash-devel \
     libzstd-devel liblz4-devel make gcc awk
 
+  echo "Verifying liblz4 installation..."
+  if ! pkg-config --cflags --libs liblz4; then
+    err "liblz4 was not properly installed or pkg-config cannot find it!"
+  fi
+
   echo "Step 2: Configuring rsync..."
   cd "${rsync_src}" || err "Failed to cd into ${rsync_src}"
 
