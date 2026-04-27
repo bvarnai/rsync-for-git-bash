@@ -1,11 +1,78 @@
-name: GitHub Actions Demo
-run-name: ${{ github.actor }} is testing out GitHub Actions 🚀
-on: [push]
+name: Build rsync for Git Bash
+run-name: ${{ github.actor }} is building rsync 🚀
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      git_version:
+        description: 'Git for Windows version (e.g., 2.44.0.windows.1). Leave empty for latest.'
+        required: false
+        type: string
+
 jobs:
-  Explore-GitHub-Actions:
-    runs-on: ubuntu-latest
+  Build-Rsync:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: bash
     steps:
       - name: Check out repository code
         uses: actions/checkout@v4
-      - name: Say Hello
-        run: echo "Hello World! The automation is working."
+
+      - name: Determine Target Git Version
+        id: git-version
+        run: |
+          if [[ -n "${{ github.event.inputs.git_version }}" ]]; then
+            GIT_VER="${{ github.event.inputs.git_version }}"
+          else
+            # Fetch latest release tag from Git for Windows
+            GIT_VER=$(curl -s https://api.github.com/repos/git-for-windows/git/releases/latest | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
+            # Strip the 'v' prefix if present
+            GIT_VER=${GIT_VER#v}
+          fi
+          echo "Target Git Version: $GIT_VER"
+          echo "version=$GIT_VER" >> $GITHUB_OUTPUT
+
+      - name: Clone Dependencies
+        run: |
+          mkdir -p workspace
+          cd workspace
+          
+          echo "Cloning build-extra (shallow)..."
+          git clone --depth 1 https://github.com/git-for-windows/build-extra.git
+          
+          echo "Cloning git-sdk-64 (shallow history, but enough to search recent commits)..."
+          # We need some history to find the commit by date, so depth=50 is safer than 1.
+          git clone --depth 100 https://github.com/git-for-windows/git-sdk-64.git
+          
+          echo "Cloning rsync (shallow)..."
+          git clone --depth 1 https://github.com/RsyncProject/rsync.git
+
+      - name: Resolve and Checkout SDK Commit
+        run: |
+          GIT_VER="${{ steps.git-version.outputs.version }}"
+          
+          # Run the script to find the commit
+          # It outputs information, we capture the SDK Commit line
+          OUTPUT=$(./scripts/find-sdk-commit.sh "$GIT_VER" workspace)
+          echo "$OUTPUT"
+          
+          SDK_COMMIT=$(echo "$OUTPUT" | grep "^SDK Commit:" | awk '{print $3}')
+          
+          if [[ -z "$SDK_COMMIT" ]]; then
+            echo "Failed to resolve SDK commit."
+            exit 1
+          fi
+          
+          echo "Checking out git-sdk-64 at commit $SDK_COMMIT"
+          cd workspace/git-sdk-64
+          # If the commit is deep, we might need to fetch it specifically
+          git fetch origin "$SDK_COMMIT" --depth 1
+          git checkout "$SDK_COMMIT"
+
+      - name: Build rsync
+        run: |
+          echo "Dependencies are ready. Proceeding with MSYS2 build..."
+          # Your build steps using the workspace/git-sdk-64 environment and workspace/rsync source go here.
