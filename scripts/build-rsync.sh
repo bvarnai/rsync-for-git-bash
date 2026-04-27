@@ -49,7 +49,7 @@ main() {
   cd "${rsync_src}" || err "Failed to cd into ${rsync_src}"
 
   ./configure \
-    --prefix="${HOME}/dev/rsync" \
+    --prefix="${HOME}/build/rsync" \
     --disable-acl-support  \
     --disable-xattr-support  \
     --disable-md2man
@@ -67,7 +67,7 @@ main() {
   fi
 
   echo "Running rsync --version:"
-  "${HOME}/dev/rsync/bin/rsync.exe" --version
+  "${HOME}/build/rsync/bin/rsync.exe" --version
 
   echo "Build and installation complete!"
 }
