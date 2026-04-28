@@ -86,15 +86,21 @@ jobs:
           # Setting MSYSTEM=MSYS is critical so the SDK uses /usr/bin tools instead of inheriting MINGW64 from the runner.
           MSYSTEM=MSYS workspace/git-sdk-64/usr/bin/bash.exe -lc "$WORKSPACE_UNIX/scripts/build-rsync.sh $WORKSPACE_UNIX/workspace/rsync"
 
+      - name: Generate versions
+        run: |
+          chmod +x scripts/generate-versions-md.sh
+          GIT_VER="${{ steps.git-version.outputs.version }}"
+          ./scripts/generate-versions-md.sh "$GIT_VER" workspace/rsync workspace/git-sdk-64 RELEASE_VERSIONS.md
+
       - name: Package rsync
         run: |
           echo "Packaging rsync distribution..."
-          
+
           # Make the packaging script executable
           chmod +x scripts/package-rsync.sh
-          
+
           WORKSPACE_UNIX=$(cygpath -u "${{ github.workspace }}")
-          
+
           # Execute the packaging script inside the git-sdk-64 MSYS2 environment
           MSYSTEM=MSYS workspace/git-sdk-64/usr/bin/bash.exe -lc "$WORKSPACE_UNIX/scripts/package-rsync.sh ~/build/rsync $WORKSPACE_UNIX/rsync-standalone.zip"
 
