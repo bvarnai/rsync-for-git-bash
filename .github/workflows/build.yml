@@ -96,10 +96,12 @@ jobs:
         id: pkg-name
         run: |
           GIT_VER="${{ steps.git-version.outputs.version }}"
-          RSYNC_VER=$(git -C workspace/rsync describe --tags --always 2>/dev/null || echo "Unknown")
-          # Handle tags like v3.3.0 -> 3.3.0
-          RSYNC_VER=${RSYNC_VER#v}
-          ZIP_NAME="rsync-${RSYNC_VER}-for-git-${GIT_VER}-x64.zip"
+          # Extract version from version.h since shallow clone breaks git describe
+          RSYNC_VER=$(awk -F'"' '/RSYNC_VERSION/ {print $2}' workspace/rsync/version.h)
+          if [ -z "$RSYNC_VER" ]; then
+            RSYNC_VER="Unknown"
+          fi
+          ZIP_NAME="rsync-${RSYNC_VER}-git-${GIT_VER}-64-bit.zip"
           echo "zip_name=$ZIP_NAME" >> $GITHUB_OUTPUT
 
       - name: Package rsync
