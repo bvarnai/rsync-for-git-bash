@@ -76,12 +76,21 @@ main() {
     fi
   done < <(ldd "${rsync_exe}" | awk '{print $3}' | grep -E '^/usr/.*\.dll$')
 
+  echo "Step 2.5: Copying README..."
+  local -r script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" &> /dev/null && pwd)"
+  local -r project_root="$(dirname "${script_dir}")"
+  if [[ -f "${project_root}/RELEASE_README.md" ]]; then
+    cp "${project_root}/RELEASE_README.md" "${staging_dir}/README.md"
+  else
+    echo "Warning: RELEASE_README.md not found at ${project_root}/RELEASE_README.md"
+  fi
+
   echo "Step 3: Creating ZIP archive..."
   cd "${staging_dir}"
   
   # Remove an existing zip file if it exists to ensure a clean package
   rm -f "${output_zip}"
-  zip -r "${output_zip}" bin
+  zip -r "${output_zip}" bin README.md
 
   echo "Cleaning up staging directory..."
   cd - > /dev/null
