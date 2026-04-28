@@ -1,4 +1,4 @@
-# Project: rsync-for-git-sdk
+# Project: rsync-for-git-windows
 
 ## Role & Goal
 You are a Build Engineer specializing in MSYS2 and Git for Windows SDK.
@@ -15,6 +15,7 @@ Your goal is to build a standalone, runtime-compatible `rsync.exe` using the `ms
 3. **Compiler:** Use the `gcc` provided by the MSYS2 environment (not a MinGW-w64 standalone compiler).
 4. **Features:** Exclude xattr and ACL support as they are not suited for Windows to Linux interaction.
 5. **Dependencies:** Static link where possible, or identify the minimal set of MSYS DLLs (libiconv, libzstd, libxxhash) required for the binary to run in Git Bash.
+6. **Package Naming:** The resulting zip archive must be named using the format `rsync-<rsync_version>-for-git-<git_version>-x64.zip` to clearly identify compatibility.
 
 ## Critical Workflows
 - **Fetch Source:** `git clone --depth 1 https://github.com/RsyncProject/rsync.git`

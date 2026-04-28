@@ -92,6 +92,16 @@ jobs:
           GIT_VER="${{ steps.git-version.outputs.version }}"
           ./scripts/generate-versions-md.sh "$GIT_VER" workspace/rsync workspace/git-sdk-64 RELEASE_VERSIONS.md
 
+      - name: Determine package name
+        id: pkg-name
+        run: |
+          GIT_VER="${{ steps.git-version.outputs.version }}"
+          RSYNC_VER=$(git -C workspace/rsync describe --tags --always 2>/dev/null || echo "Unknown")
+          # Handle tags like v3.3.0 -> 3.3.0
+          RSYNC_VER=${RSYNC_VER#v}
+          ZIP_NAME="rsync-${RSYNC_VER}-for-git-${GIT_VER}-x64.zip"
+          echo "zip_name=$ZIP_NAME" >> $GITHUB_OUTPUT
+
       - name: Package rsync
         run: |
           echo "Packaging rsync distribution..."
@@ -100,12 +110,13 @@ jobs:
           chmod +x scripts/package-rsync.sh
 
           WORKSPACE_UNIX=$(cygpath -u "${{ github.workspace }}")
+          ZIP_NAME="${{ steps.pkg-name.outputs.zip_name }}"
 
           # Execute the packaging script inside the git-sdk-64 MSYS2 environment
-          MSYSTEM=MSYS workspace/git-sdk-64/usr/bin/bash.exe -lc "$WORKSPACE_UNIX/scripts/package-rsync.sh ~/build/rsync $WORKSPACE_UNIX/rsync-standalone.zip"
+          MSYSTEM=MSYS workspace/git-sdk-64/usr/bin/bash.exe -lc "$WORKSPACE_UNIX/scripts/package-rsync.sh ~/build/rsync $WORKSPACE_UNIX/$ZIP_NAME"
 
-      - name: Upload Artifact
+      - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: rsync-for-git-bash
-          path: rsync-standalone.zip
+          name: ${{ steps.pkg-name.outputs.zip_name }}
+          path: ${{ steps.pkg-name.outputs.zip_name }}
