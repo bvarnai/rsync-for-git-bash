@@ -19,8 +19,7 @@ jobs:
       - id: check
         shell: bash
         run: |
-          chmod +x scripts/check-versions.sh
-          ./scripts/check-versions.sh
+          bash scripts/check-versions.sh
 
   Resolve-SDK:
     needs: Check
@@ -48,7 +47,7 @@ jobs:
         id: resolve
         run: |
           GIT_VER="${{ needs.Check.outputs.git_ver }}"
-          OUTPUT=$(./scripts/find-sdk-commit.sh "$GIT_VER" workspace)
+          OUTPUT=$(bash ./scripts/find-sdk-commit.sh "$GIT_VER" workspace)
           echo "$OUTPUT"
           SDK_COMMIT=$(echo "$OUTPUT" | grep "^SDK Commit:" | awk '{print $3}')
           if [[ -z "$SDK_COMMIT" ]]; then

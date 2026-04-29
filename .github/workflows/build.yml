@@ -38,12 +38,12 @@ jobs:
           echo "Cloning git-sdk-64 (shallow history, but enough to search recent commits)..."
           git clone --depth 100 https://github.com/git-for-windows/git-sdk-64.git
 
-      - name: Resolve SDK Commit
+      - name: Resolve SDK commit
         id: resolve-sdk
         run: |
           GIT_VER="${{ steps.git-version.outputs.version }}"
 
-          OUTPUT=$(./scripts/find-sdk-commit.sh "$GIT_VER" workspace)
+          OUTPUT=$(bash ./scripts/find-sdk-commit.sh "$GIT_VER" workspace)
           echo "$OUTPUT"
 
           SDK_COMMIT=$(echo "$OUTPUT" | grep "^SDK Commit:" | awk '{print $3}')

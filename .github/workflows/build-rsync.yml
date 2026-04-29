@@ -64,9 +64,8 @@ jobs:
 
       - name: Generate versions
         run: |
-          chmod +x scripts/generate-versions-md.sh
           GIT_VER="${{ inputs.git_version }}"
-          ./scripts/generate-versions-md.sh "$GIT_VER" workspace/rsync workspace/git-sdk-64 RELEASE_VERSIONS.md
+          bash ./scripts/generate-versions-md.sh "$GIT_VER" workspace/rsync workspace/git-sdk-64 RELEASE_VERSIONS.md
 
       - name: Determine package name
         id: pkg-name
