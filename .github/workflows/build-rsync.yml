@@ -1,0 +1,100 @@
+name: Build rsync
+on:
+  workflow_call:
+    inputs:
+      git_version:
+        description: 'Git for Windows version'
+        required: true
+        type: string
+      sdk_commit:
+        description: 'SDK Commit Hash'
+        required: true
+        type: string
+  workflow_dispatch:
+    inputs:
+      git_version:
+        description: 'Git for Windows version'
+        required: true
+        type: string
+      sdk_commit:
+        description: 'SDK Commit Hash'
+        required: true
+        type: string
+
+jobs:
+  Build-Rsync:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Clone Dependencies
+        run: |
+          mkdir -p workspace
+          cd workspace
+
+          echo "Fetching specific git-sdk-64 commit..."
+          mkdir git-sdk-64
+          cd git-sdk-64
+          git init
+          git remote add origin https://github.com/git-for-windows/git-sdk-64.git
+          git fetch origin "${{ inputs.sdk_commit }}" --depth 1
+          git checkout FETCH_HEAD
+          cd ..
+
+          echo "Cloning rsync (shallow)..."
+          git clone --depth 1 https://github.com/RsyncProject/rsync.git
+
+      - name: Build rsync
+        run: |
+          echo "Dependencies are ready. Proceeding with MSYS2 build..."
+
+          # Make the build script executable
+          chmod +x scripts/build-rsync.sh
+
+          # Convert GITHUB_WORKSPACE to a path the MSYS2 environment understands
+          WORKSPACE_UNIX=$(cygpath -u "${{ github.workspace }}")
+
+          # Execute the build script inside the git-sdk-64 MSYS2 environment
+          # Setting MSYSTEM=MSYS is critical so the SDK uses /usr/bin tools instead of inheriting MINGW64 from the runner.
+          MSYSTEM=MSYS workspace/git-sdk-64/usr/bin/bash.exe -lc "$WORKSPACE_UNIX/scripts/build-rsync.sh $WORKSPACE_UNIX/workspace/rsync"
+
+      - name: Generate versions
+        run: |
+          chmod +x scripts/generate-versions-md.sh
+          GIT_VER="${{ inputs.git_version }}"
+          ./scripts/generate-versions-md.sh "$GIT_VER" workspace/rsync workspace/git-sdk-64 RELEASE_VERSIONS.md
+
+      - name: Determine package name
+        id: pkg-name
+        run: |
+          GIT_VER="${{ inputs.git_version }}"
+          # Extract version from version.h since shallow clone breaks git describe
+          RSYNC_VER=$(awk -F'"' '/RSYNC_VERSION/ {print $2}' workspace/rsync/version.h)
+          if [ -z "$RSYNC_VER" ]; then
+            RSYNC_VER="Unknown"
+          fi
+          ZIP_NAME="rsync-${RSYNC_VER}-for-git-${GIT_VER}-64-bit.zip"
+          echo "zip_name=$ZIP_NAME" >> $GITHUB_OUTPUT
+
+      - name: Package rsync
+        run: |
+          echo "Packaging rsync distribution..."
+
+          # Make the packaging script executable
+          chmod +x scripts/package-rsync.sh
+
+          WORKSPACE_UNIX=$(cygpath -u "${{ github.workspace }}")
+          ZIP_NAME="${{ steps.pkg-name.outputs.zip_name }}"
+
+          # Execute the packaging script inside the git-sdk-64 MSYS2 environment
+          MSYSTEM=MSYS workspace/git-sdk-64/usr/bin/bash.exe -lc "$WORKSPACE_UNIX/scripts/package-rsync.sh ~/build/rsync $WORKSPACE_UNIX/$ZIP_NAME"
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.pkg-name.outputs.zip_name }}
+          path: ${{ steps.pkg-name.outputs.zip_name }}
