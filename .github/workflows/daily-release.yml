@@ -65,7 +65,7 @@ jobs:
       sdk_commit: ${{ needs.Resolve-SDK.outputs.sdk_commit }}
 
   Create-Draft-Release:
-    needs: [Check, Build-Rsync]
+    needs: [Check, Resolve-SDK, Build-Rsync]
     runs-on: ubuntu-latest
     permissions:
       contents: write
