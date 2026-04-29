@@ -4,12 +4,6 @@ on:
   push:
     branches: [ main ]
   pull_request:
-  workflow_dispatch:
-    inputs:
-      git_version:
-        description: 'Git for Windows version (e.g., 2.44.0.windows.1). Leave empty for latest.'
-        required: false
-        type: string
 
 jobs:
   Resolve-Parameters:
@@ -27,14 +21,10 @@ jobs:
       - name: Determine target Git version
         id: git-version
         run: |
-          if [[ -n "${{ github.event.inputs.git_version }}" ]]; then
-            GIT_VER="${{ github.event.inputs.git_version }}"
-          else
-            # Fetch latest release tag from Git for Windows
-            GIT_VER=$(curl -s https://api.github.com/repos/git-for-windows/git/releases/latest | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
-            # Strip the 'v' prefix if present
-            GIT_VER=${GIT_VER#v}
-          fi
+          # Fetch latest release tag from Git for Windows
+          GIT_VER=$(curl -s https://api.github.com/repos/git-for-windows/git/releases/latest | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
+          # Strip the 'v' prefix if present
+          GIT_VER=${GIT_VER#v}
           echo "Target Git version: $GIT_VER"
           echo "version=$GIT_VER" >> $GITHUB_OUTPUT
 
