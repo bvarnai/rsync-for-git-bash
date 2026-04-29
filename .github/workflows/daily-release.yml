@@ -1,4 +1,4 @@
-name: Daily rsync release
+name: Daily release
 on:
   schedule:
     - cron: '0 0 * * *'

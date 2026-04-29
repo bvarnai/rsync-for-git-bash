@@ -1,4 +1,4 @@
-name: Build rsync
+name: Build
 run-name: ${{ github.actor }} is building rsync 🚀
 on:
   push:
