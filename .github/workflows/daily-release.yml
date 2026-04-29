@@ -1,0 +1,92 @@
+name: Daily Release
+on:
+  schedule:
+    - cron: '0 0 * * *'
+  workflow_dispatch:
+
+jobs:
+  Check:
+    runs-on: ubuntu-latest
+    outputs:
+      needs_build: ${{ steps.check.outputs.needs_build }}
+      rsync_ver: ${{ steps.check.outputs.rsync_ver }}
+      git_ver: ${{ steps.check.outputs.git_ver }}
+      tag_name: ${{ steps.check.outputs.tag_name }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - id: check
+        shell: bash
+        run: |
+          chmod +x scripts/check-versions.sh
+          ./scripts/check-versions.sh
+
+  Resolve-SDK:
+    needs: Check
+    if: needs.Check.outputs.needs_build == 'true'
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: bash
+    outputs:
+      sdk_commit: ${{ steps.resolve.outputs.sdk_commit }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Clone dependencies for SDK resolution
+        run: |
+          mkdir -p workspace
+          cd workspace
+          echo "Cloning build-extra (shallow)..."
+          git clone --depth 1 https://github.com/git-for-windows/build-extra.git
+          echo "Cloning git-sdk-64 (shallow history)..."
+          git clone --depth 100 https://github.com/git-for-windows/git-sdk-64.git
+
+      - name: Resolve SDK Commit
+        id: resolve
+        run: |
+          GIT_VER="${{ needs.Check.outputs.git_ver }}"
+          OUTPUT=$(./scripts/find-sdk-commit.sh "$GIT_VER" workspace)
+          echo "$OUTPUT"
+          SDK_COMMIT=$(echo "$OUTPUT" | grep "^SDK Commit:" | awk '{print $3}')
+          if [[ -z "$SDK_COMMIT" ]]; then
+            echo "Failed to resolve SDK commit."
+            exit 1
+          fi
+          echo "Resolved SDK commit: $SDK_COMMIT"
+          echo "sdk_commit=$SDK_COMMIT" >> $GITHUB_OUTPUT
+
+  Build-Rsync:
+    needs: [Check, Resolve-SDK]
+    uses: ./.github/workflows/build-rsync.yml
+    with:
+      git_version: ${{ needs.Check.outputs.git_ver }}
+      sdk_commit: ${{ needs.Resolve-SDK.outputs.sdk_commit }}
+
+  Create-Draft-Release:
+    needs: [Check, Build-Rsync]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download artifact
+        uses: actions/download-artifact@v4
+        with:
+          # The name is rsync-<rsync_ver>-for-git-<git_ver>-64-bit.zip
+          # We reconstruct it here.
+          name: rsync-${{ needs.Check.outputs.rsync_ver }}-for-git-${{ needs.Check.outputs.git_ver }}-64-bit.zip
+          path: ./dist
+
+      - name: Create Draft Release and Tag
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.Check.outputs.tag_name }}
+          name: Rsync ${{ needs.Check.outputs.rsync_ver }} for Git for Windows ${{ needs.Check.outputs.git_ver }}
+          draft: true
+          files: ./dist/*.zip
+          body: |
+            This is an automated build of rsync ${{ needs.Check.outputs.rsync_ver }} for Git for Windows ${{ needs.Check.outputs.git_ver }}.
+            
+            Built against git-sdk-64 commit: `${{ needs.Resolve-SDK.outputs.sdk_commit }}`
