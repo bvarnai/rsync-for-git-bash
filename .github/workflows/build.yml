@@ -1,9 +1,8 @@
-name: rsync Builder
+name: Build rsync
 run-name: ${{ github.actor }} is building rsync 🚀
 on:
   push:
     branches: [ main ]
-  pull_request:
 
 jobs:
   Resolve-Parameters:

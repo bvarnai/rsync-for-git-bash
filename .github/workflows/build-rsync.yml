@@ -1,4 +1,4 @@
-name: Build rsync
+name: Reusable rsync build
 on:
   workflow_call:
     inputs:

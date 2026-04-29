@@ -1,4 +1,4 @@
-name: Daily Release
+name: Daily rsync release
 on:
   schedule:
     - cron: '0 0 * * *'
@@ -88,5 +88,5 @@ jobs:
           files: ./dist/*.zip
           body: |
             This is an automated build of rsync ${{ needs.Check.outputs.rsync_ver }} for Git for Windows ${{ needs.Check.outputs.git_ver }}.
-            
+
             Built against git-sdk-64 commit: `${{ needs.Resolve-SDK.outputs.sdk_commit }}`
