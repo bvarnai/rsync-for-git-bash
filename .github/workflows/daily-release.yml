@@ -49,7 +49,10 @@ jobs:
           GIT_VER="${{ needs.Check.outputs.git_ver }}"
           OUTPUT=$(bash ./scripts/find-sdk-commit.sh "$GIT_VER" workspace)
           echo "$OUTPUT"
-          SDK_COMMIT=$(echo "$OUTPUT" | grep "^SDK Commit:" | awk '{print $3}')
+          
+          # Extract and sanitize: strip CR, LF, and leading/trailing whitespace
+          SDK_COMMIT=$(echo "$OUTPUT" | grep "^SDK Commit:" | awk '{print $3}' | tr -d '\r' | xargs)
+          
           if [[ -z "$SDK_COMMIT" ]]; then
             echo "Failed to resolve SDK commit."
             exit 1
