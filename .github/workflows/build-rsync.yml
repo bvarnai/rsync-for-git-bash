@@ -117,4 +117,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ${{ steps.pkg-name.outputs.zip_name }}
-          path: ${{ steps.pkg-name.outputs.zip_name }}
+          path: |
+            ${{ steps.pkg-name.outputs.zip_name }}
+            ${{ steps.pkg-name.outputs.zip_name }}.sha256

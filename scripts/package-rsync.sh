@@ -103,6 +103,10 @@ main() {
   rm -f "${output_zip}"
   zip -r "${output_zip}" "${zip_files[@]}"
 
+  echo "Step 4: Generating SHA256 checksum..."
+  sha256sum "$(basename "${output_zip}")" > "$(basename "${output_zip}").sha256"
+  mv "$(basename "${output_zip}").sha256" "$(dirname "${output_zip}")/"
+
   echo "Cleaning up staging directory..."
   cd - > /dev/null
   rm -rf "${staging_dir}"

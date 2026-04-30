@@ -88,7 +88,9 @@ jobs:
           tag_name: ${{ needs.Check.outputs.tag_name }}
           name: Rsync ${{ needs.Check.outputs.rsync_ver }} for Git for Windows ${{ needs.Check.outputs.git_ver }}
           draft: true
-          files: ./dist/*.zip
+          files: |
+            ./dist/*.zip
+            ./dist/*.sha256
           body: |
             This is an automated build of rsync ${{ needs.Check.outputs.rsync_ver }} for Git for Windows ${{ needs.Check.outputs.git_ver }}.
 
