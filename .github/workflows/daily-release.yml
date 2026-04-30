@@ -61,6 +61,7 @@ jobs:
     needs: [Check, Resolve-SDK]
     uses: ./.github/workflows/build-rsync.yml
     with:
+      rsync_version: ${{ needs.Check.outputs.rsync_ver }}
       git_version: ${{ needs.Check.outputs.git_ver }}
       sdk_commit: ${{ needs.Resolve-SDK.outputs.sdk_commit }}
 

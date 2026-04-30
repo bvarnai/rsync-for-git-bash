@@ -2,6 +2,10 @@ name: Parametrized build
 on:
   workflow_call:
     inputs:
+      rsync_version:
+        description: 'Rsync version/tag (without v prefix)'
+        required: true
+        type: string
       git_version:
         description: 'Git for Windows version'
         required: true
@@ -12,6 +16,10 @@ on:
         type: string
   workflow_dispatch:
     inputs:
+      rsync_version:
+        description: 'Rsync version/tag (without v prefix)'
+        required: true
+        type: string
       git_version:
         description: 'Git for Windows version'
         required: true
@@ -45,8 +53,8 @@ jobs:
           git checkout FETCH_HEAD
           cd ..
 
-          echo "Cloning rsync (shallow)..."
-          git clone --depth 1 https://github.com/RsyncProject/rsync.git
+          echo "Cloning rsync version ${{ inputs.rsync_version }}..."
+          git clone --depth 1 --branch "v${{ inputs.rsync_version }}" https://github.com/RsyncProject/rsync.git
 
       - name: Build rsync
         run: |
@@ -71,11 +79,24 @@ jobs:
         id: pkg-name
         run: |
           GIT_VER="${{ inputs.git_version }}"
+          EXPECTED_RSYNC_VER="${{ inputs.rsync_version }}"
+          
           # Extract version from version.h since shallow clone breaks git describe
           RSYNC_VER=$(awk -F'"' '/RSYNC_VERSION/ {print $2}' workspace/rsync/version.h)
+          
           if [ -z "$RSYNC_VER" ]; then
-            RSYNC_VER="Unknown"
+            echo "Error: Could not extract rsync version from version.h"
+            exit 1
           fi
+
+          echo "Expected Rsync version: $EXPECTED_RSYNC_VER"
+          echo "Extracted Rsync version: $RSYNC_VER"
+
+          if [[ "$RSYNC_VER" != "$EXPECTED_RSYNC_VER" ]]; then
+            echo "Error: Rsync version mismatch! Expected $EXPECTED_RSYNC_VER but found $RSYNC_VER"
+            exit 1
+          fi
+
           ZIP_NAME="rsync-${RSYNC_VER}-for-git-${GIT_VER}-64-bit.zip"
           echo "zip_name=$ZIP_NAME" >> $GITHUB_OUTPUT
 

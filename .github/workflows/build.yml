@@ -11,11 +11,23 @@ jobs:
       run:
         shell: bash
     outputs:
+      rsync_version: ${{ steps.rsync-version.outputs.version }}
       git_version: ${{ steps.git-version.outputs.version }}
       sdk_commit: ${{ steps.resolve-sdk.outputs.sdk_commit }}
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
+
+      - name: Determine latest rsync version
+        id: rsync-version
+        run: |
+          RSYNC_TAG=$(curl -s https://api.github.com/repos/RsyncProject/rsync/releases/latest | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
+          if [ -z "$RSYNC_TAG" ]; then
+             RSYNC_TAG=$(curl -s "https://api.github.com/repos/RsyncProject/rsync/tags" | grep '"name":' | head -n 1 | sed -E 's/.*"([^"]+)".*/\1/')
+          fi
+          RSYNC_VER=${RSYNC_TAG#v}
+          echo "Latest rsync version: $RSYNC_VER"
+          echo "version=$RSYNC_VER" >> $GITHUB_OUTPUT
 
       - name: Determine target Git version
         id: git-version
@@ -60,5 +72,6 @@ jobs:
     needs: Resolve-Parameters
     uses: ./.github/workflows/build-rsync.yml
     with:
+      rsync_version: ${{ needs.Resolve-Parameters.outputs.rsync_version }}
       git_version: ${{ needs.Resolve-Parameters.outputs.git_version }}
       sdk_commit: ${{ needs.Resolve-Parameters.outputs.sdk_commit }}
