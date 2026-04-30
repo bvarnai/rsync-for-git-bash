@@ -73,6 +73,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      issues: write
     steps:
       - name: Download artifact
         uses: actions/download-artifact@v4
@@ -95,3 +96,25 @@ jobs:
             This is an automated build of rsync ${{ needs.Check.outputs.rsync_ver }} for Git for Windows ${{ needs.Check.outputs.git_ver }}.
 
             Built against git-sdk-64 commit: `${{ needs.Resolve-SDK.outputs.sdk_commit }}`
+
+      - name: Create notification issue
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TITLE="Draft Release Ready: Rsync ${{ needs.Check.outputs.rsync_ver }}"
+          BODY=$(cat <<EOF
+          A new draft release for rsync-for-git-bash is ready for review.
+          
+          **Rsync Version:** ${{ needs.Check.outputs.rsync_ver }}
+          **Git for Windows:** ${{ needs.Check.outputs.git_ver }}
+          **Tag:** ${{ needs.Check.outputs.tag_name }}
+          
+          You can review and publish the draft here:
+          ${{ github.server_url }}/${{ github.repository }}/releases
+          
+          *This issue was created automatically by the Daily Release workflow.*
+          EOF
+          )
+          
+          gh issue create --title "$TITLE" --body "$BODY"
