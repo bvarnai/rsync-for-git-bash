@@ -49,10 +49,10 @@ jobs:
           GIT_VER="${{ needs.Check.outputs.git_ver }}"
           OUTPUT=$(bash ./scripts/find-sdk-commit.sh "$GIT_VER" workspace)
           echo "$OUTPUT"
-          
+
           # Extract and sanitize: strip CR, LF, and leading/trailing whitespace
           SDK_COMMIT=$(echo "$OUTPUT" | grep "^SDK Commit:" | awk '{print $3}' | tr -d '\r' | xargs)
-          
+
           if [[ -z "$SDK_COMMIT" ]]; then
             echo "Failed to resolve SDK commit."
             exit 1
@@ -82,7 +82,7 @@ jobs:
           name: rsync-${{ needs.Check.outputs.rsync_ver }}-for-git-${{ needs.Check.outputs.git_ver }}-64-bit.zip
           path: ./dist
 
-      - name: Create Draft Release and Tag
+      - name: Create draft release and tag
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ needs.Check.outputs.tag_name }}
@@ -94,4 +94,4 @@ jobs:
           body: |
             This is an automated build of rsync ${{ needs.Check.outputs.rsync_ver }} for Git for Windows ${{ needs.Check.outputs.git_ver }}.
 
-            Built against git-sdk-64 commit: `${{ needs.Resolve-SDK.outputs.sdk_commit }}`
+            Built against git-sdk-64 commit: ${{ needs.Resolve-SDK.outputs.sdk_commit }}
