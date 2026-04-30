@@ -44,6 +44,12 @@ main() {
     pacman -S --noconfirm zip
   fi
 
+  # Ensure sha256sum is installed (provided by coreutils)
+  if ! command -v sha256sum &> /dev/null; then
+    echo "Installing coreutils package for sha256sum..."
+    pacman -S --noconfirm coreutils
+  fi
+
   echo "Step 1: Preparing staging directory..."
   # Package binaries into a flat 'bin' directory
   local -r bin_dir="${staging_dir}/bin"
@@ -104,8 +110,8 @@ main() {
   zip -r "${output_zip}" "${zip_files[@]}"
 
   echo "Step 4: Generating SHA256 checksum..."
-  sha256sum "$(basename "${output_zip}")" > "$(basename "${output_zip}").sha256"
-  mv "$(basename "${output_zip}").sha256" "$(dirname "${output_zip}")/"
+  # Run sha256sum from the directory where the zip was created to ensure the filename in the hash file is just the basename.
+  (cd "$(dirname "${output_zip}")" && sha256sum "$(basename "${output_zip}")" > "$(basename "${output_zip}").sha256")
 
   echo "Cleaning up staging directory..."
   cd - > /dev/null
