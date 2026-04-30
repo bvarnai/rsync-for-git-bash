@@ -29,14 +29,14 @@ This build of `rsync` is configured to be a lean, compatible tool for the Git fo
 
 ## Versioning
 
-The releases use a hybrid versioning scheme to uniquely identify the build artifact:
+The releases use a hybrid versioning scheme to uniquely identify the build artifact and its compatibility:
 
-`rsync-<rsync_version>-msys-<msys_runtime_version>`
+`rsync-<rsync_version>-for-git-<git_version>`
 
--   **`<rsync_version>`**: The official version of the rsync source code (e.g., `3.2.7`).
--   **`<msys_runtime_version>`**: The version of the `msys2-runtime` package from the Git for Windows SDK used for the build (e.g., `3.4.10.1`).
+-   **`<rsync_version>`**: The official version of the rsync source code (e.g., `3.4.2`).
+-   **`<git_version>`**: The version of Git for Windows that this build is binary-compatible with (e.g., `2.54.0.windows.1`).
 
-This allows you to match the `rsync` build to the MSYS2 runtime provided by your version of Git for Windows.
+This allows you to easily match the `rsync` build to the specific version of Git for Windows you have installed.
 
 ## Usage
 
