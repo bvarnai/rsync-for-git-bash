@@ -84,18 +84,19 @@ jobs:
           path: ./dist
 
       - name: Create draft release and tag
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ needs.Check.outputs.tag_name }}
-          name: Rsync ${{ needs.Check.outputs.rsync_ver }} for Git for Windows ${{ needs.Check.outputs.git_ver }}
-          draft: true
-          files: |
-            ./dist/*.zip
-            ./dist/*.sha256
-          body: |
-            This is an automated build of rsync ${{ needs.Check.outputs.rsync_ver }} for Git for Windows ${{ needs.Check.outputs.git_ver }}.
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "${{ needs.Check.outputs.tag_name }}" \
+            --repo "${{ github.repository }}" \
+            --title "Rsync ${{ needs.Check.outputs.rsync_ver }} for Git for Windows ${{ needs.Check.outputs.git_ver }}" \
+            --draft \
+            --notes "This is an automated build of rsync ${{ needs.Check.outputs.rsync_ver }} for Git for Windows ${{ needs.Check.outputs.git_ver }}.
 
-            Built against git-sdk-64 commit: `${{ needs.Resolve-SDK.outputs.sdk_commit }}`
+          Built against git-sdk-64 commit: \`${{ needs.Resolve-SDK.outputs.sdk_commit }}\`" \
+            ./dist/*.zip \
+            ./dist/*.sha256
 
       - name: Create notification issue
         shell: bash
