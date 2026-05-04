@@ -117,4 +117,4 @@ jobs:
           EOF
           )
           
-          gh issue create --title "$TITLE" --body "$BODY"
+          gh issue create --title "$TITLE" --body "$BODY" --repo ${{ github.repository }}
