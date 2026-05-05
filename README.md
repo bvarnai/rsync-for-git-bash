@@ -1,10 +1,10 @@
 # rsync-for-git-bash
 
-A specialized build of [`rsync`](https://rsync.samba.org/) linked against the specific `msys-2.0.dll` runtime used by a corresponding Git for Windows release.
+A specialized build of [`rsync`](https://rsync.samba.org/) linked against the specific `msys-2.0.dll` runtime used by a corresponding [Git for Windows](https://gitforwindows.org/) release.
 
 ## My problem
 
-Git for Windows ships with its own MSYS2 runtime environment, including a core `msys-2.0.dll`. Standard `rsync` packages installed via `pacman` in a separate MSYS2 installation are built against a different, often newer, version of this runtime.
+[Git for Windows](https://gitforwindows.org/) ships with its own MSYS2 runtime environment, including a core `msys-2.0.dll`. Standard `rsync` packages installed via `pacman` in a separate MSYS2 installation are built against a different, often newer, version of this runtime.
 
 Due to the lack of Application Binary Interface (ABI) stability in the MSYS2 runtime, attempting to run an `rsync.exe` built against a different runtime version inside Git Bash often results in cryptic errors. For a technical deep dive into these failures, such as the `ssh dup() in/out/err failed` error, see [rsync-ssh-dll-mismatch.md](rsync-ssh-dll-mismatch.md).
 
