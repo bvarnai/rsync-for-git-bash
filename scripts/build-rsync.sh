@@ -29,11 +29,12 @@ err() {
 # Returns:
 #   None
 main() {
-  if [[ $# -ne 1 ]]; then
-    err "Usage: ${0} <rsync-source-directory>"
+  if [[ $# -ne 2 ]]; then
+    err "Usage: ${0} <rsync-source-directory> <expected-rsync-version>"
   fi
 
   local -r rsync_src="$1"
+  local -r expected_ver="$2"
 
   echo "Step 1: Installing dependencies..."
   # Update package databases and install requested packages.
@@ -43,6 +44,15 @@ main() {
   echo "Verifying liblz4 installation..."
   if ! pkg-config --cflags --libs liblz4; then
     err "liblz4 was not properly installed or pkg-config cannot find it!"
+  fi
+
+  echo "Step 1.5: Verifying rsync version..."
+  local -r actual_ver=$(awk -F'"' '/RSYNC_VERSION/ {print $2}' "${rsync_src}/version.h")
+  echo "Expected version: ${expected_ver}"
+  echo "Actual version:   ${actual_ver}"
+
+  if [[ "${actual_ver}" != "${expected_ver}" ]]; then
+    err "Version mismatch! Expected ${expected_ver} but found ${actual_ver} in version.h"
   fi
 
   echo "Step 2: Configuring rsync..."
