@@ -17,9 +17,9 @@ jobs:
           token: ${{ secrets.SCOOP_BUCKET_PAT }}
           path: scoop-bucket
 
-          - name: Update Manifest
-          shell: bash
-          run: |
+      - name: Update Manifest
+        shell: bash
+        run: |
           # Extract information from the release event
           TAG_NAME="${{ github.event.release.tag_name }}"
 
@@ -51,13 +51,13 @@ jobs:
               .url = \"$ZIP_URL\" | 
               .hash = \"$HASH\"" "$MANIFEST" > "$MANIFEST.tmp" && mv "$MANIFEST.tmp" "$MANIFEST"
 
-          - name: Commit and Push
-          run: |
+      - name: Commit and Push
+        run: |
           cd scoop-bucket
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add .
           git commit -m "Update rsync-for-git-bash to ${{ github.event.release.tag_name }}" || echo "No changes to commit"
           git push
-          env:
+        env:
           GITHUB_TOKEN: ${{ secrets.SCOOP_BUCKET_PAT }}
