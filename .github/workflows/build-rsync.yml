@@ -39,26 +39,6 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
 
-      - name: Initialize and clean pacman environment
-        run: |
-          # Get the SDK bash executable path
-          SDK_BASH_PATH=$(which bash)
-          echo "SDK bash location: $SDK_BASH_PATH"
-          
-          # Clean up any existing pacman lock files that might be corrupt
-          if [[ -f "/var/lib/pacman/db.lck" ]]; then
-            echo "Removing stale pacman lock file..."
-            sudo rm -f /var/lib/pacman/db.lck
-          fi
-          
-          # Clear pacman cache to prevent corruption
-          echo "Clearing pacman package cache..."
-          pacman -Sc --noconfirm || true
-          
-          # Initialize pacman database
-          echo "Refreshing pacman package database..."
-          pacman -Sy --noconfirm
-
       - name: Clone Dependencies
         run: |
           mkdir -p workspace
@@ -71,6 +51,8 @@ jobs:
           git remote add origin https://github.com/git-for-windows/git-sdk-64.git
           git fetch origin "${{ inputs.sdk_commit }}" --depth 1
           git checkout FETCH_HEAD
+          git clean -ffdx
+          git reset --hard FETCH_HEAD
           cd ..
 
           echo "Cloning rsync version ${{ inputs.rsync_version }}..."
@@ -84,10 +66,10 @@ jobs:
           WORKSPACE_UNIX=$(cygpath -u "${{ github.workspace }}")
           SDK_ROOT_UNIX="$WORKSPACE_UNIX/workspace/git-sdk-64"
           BUILD_PREFIX="$WORKSPACE_UNIX/build/rsync"
-          
+
           # Create the build directory in advance to avoid race conditions
           mkdir -p "$BUILD_PREFIX"
-          
+
           # Execute the build script directly using the SDK's bash.
           # We prepend MSYSTEM and PATH so the command runs in the correct environment.
           MSYSTEM=MSYS \
