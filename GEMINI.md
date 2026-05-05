@@ -21,6 +21,7 @@ Your goal is to build a standalone, runtime-compatible `rsync.exe` using the `ms
 - **Fetch Source:** `git clone --depth 1 https://github.com/RsyncProject/rsync.git`
 - **Configure:** `./configure --prefix=/usr --with-included-zlib=no` (Adjust flags based on Git SDK availability).
 - **Verification:** After building, run `ldd rsync.exe` to ensure it links to `msys-2.0.dll` and not standard Windows system libs.
+- **Scoop Publication:** Requires a GitHub Personal Access Token (PAT) with `repo` scope stored as a repository secret named `SCOOP_BUCKET_PAT`. This token is used to push manifest updates to the `bvarnai/scoop-bucket` repository.
 
 ## Definition of Done
 A successful task ends with:

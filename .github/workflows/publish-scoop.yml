@@ -14,52 +14,50 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: bvarnai/scoop-bucket
-          token: ${{ secrets.BUCKET_PAT }}
-          path: bucket
+          token: ${{ secrets.SCOOP_BUCKET_PAT }}
+          path: scoop-bucket
 
-      - name: Update Manifest
-        shell: bash
-        run: |
+          - name: Update Manifest
+          shell: bash
+          run: |
           # Extract information from the release event
           TAG_NAME="${{ github.event.release.tag_name }}"
-          
+
           # Find the ZIP asset and its SHA256 asset
           ASSETS=$(gh release view "$TAG_NAME" --repo "${{ github.repository }}" --json assets --jq '.assets[]')
-          
+
           ZIP_URL=$(echo "$ASSETS" | jq -r 'select(.name | endswith(".zip")) | .url')
           SHA_URL=$(echo "$ASSETS" | jq -r 'select(.name | endswith(".sha256")) | .url')
-          
+
           if [[ -z "$ZIP_URL" || -z "$SHA_URL" ]]; then
             echo "Error: Could not find ZIP or SHA256 assets in release."
             exit 1
           fi
-          
+
           # Download the SHA256 file to get the hash
           curl -L -s "$SHA_URL" -o release.sha256
           HASH=$(awk '{print $1}' release.sha256)
-          
+
           # Use the rsync version as the primary version
           VERSION=$(echo "$TAG_NAME" | sed -E 's/rsync-([0-9.]+)-for-git-.*/\1/')
-          
+
           echo "Updating manifest for version $VERSION (Tag: $TAG_NAME)..."
-          
-          # Source manifest from this repo
-          SOURCE_MANIFEST="scoop/rsync-for-git-bash.json"
-          # Destination in the bucket repo
-          DEST_MANIFEST="bucket/bucket/rsync-for-git-bash.json"
-          
-          # Update the fields and save to bucket
+
+          # The manifest now lives in the bucket repository
+          MANIFEST="scoop-bucket/bucket/rsync-for-git-bash.json"
+
+          # Update the fields in-place within the checked-out bucket
           jq ".version = \"$VERSION\" | 
               .url = \"$ZIP_URL\" | 
-              .hash = \"$HASH\"" "$SOURCE_MANIFEST" > "$DEST_MANIFEST"
+              .hash = \"$HASH\"" "$MANIFEST" > "$MANIFEST.tmp" && mv "$MANIFEST.tmp" "$MANIFEST"
 
-      - name: Commit and Push
-        run: |
-          cd bucket
+          - name: Commit and Push
+          run: |
+          cd scoop-bucket
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add .
           git commit -m "Update rsync-for-git-bash to ${{ github.event.release.tag_name }}" || echo "No changes to commit"
           git push
-        env:
-          GITHUB_TOKEN: ${{ secrets.BUCKET_PAT }}
+          env:
+          GITHUB_TOKEN: ${{ secrets.SCOOP_BUCKET_PAT }}
