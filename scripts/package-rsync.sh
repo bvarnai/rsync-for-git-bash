@@ -16,8 +16,40 @@ set -euo pipefail
 # Returns:
 #   None
 err() {
-  echo "[$(date +'%Y-%m-%dT%H:%M:%S%z')]: $*" >&2
+  echo "[$(date +'%Y-%m-%dT%H:%M:%S%z')]: ERROR: $*" >&2
   exit 1
+}
+
+# Log a message with timestamp.
+log() {
+  echo "[$(date +'%Y-%m-%dT%H:%M:%S%z')]: $*"
+}
+
+# Safely install a package with retry logic.
+install_package() {
+  local -r package="$1"
+  local retry_count=0
+  local max_retries=3
+
+  while [[ $retry_count -lt $max_retries ]]; do
+    # Remove any stale pacman lock
+    if [[ -f "/var/lib/pacman/db.lck" ]]; then
+      rm -f /var/lib/pacman/db.lck
+    fi
+
+    if pacman -S --noconfirm "$package"; then
+      log "Package '$package' installed successfully."
+      return 0
+    fi
+
+    retry_count=$((retry_count + 1))
+    if [[ $retry_count -lt $max_retries ]]; then
+      log "Failed to install '$package', retrying... (attempt $((retry_count + 1))/$max_retries)"
+      sleep 5
+    fi
+  done
+
+  err "Failed to install package '$package' after $max_retries attempts"
 }
 
 # Main function to orchestrate packaging.
@@ -25,7 +57,7 @@ err() {
 # Globals:
 #   None
 # Arguments:
-#   Path to the rsync installation prefix (e.g. ~/build/rsync).
+#   Path to the rsync installation prefix (e.g ~/build/rsync or absolute path).
 #   Path where the final .zip file should be saved.
 # Returns:
 #   None
@@ -38,19 +70,26 @@ main() {
   local -r output_zip="$2"
   local -r staging_dir="$(mktemp -d)"
 
+  log "Install prefix: $install_prefix"
+  log "Output zip: $output_zip"
+  log "Staging directory: $staging_dir"
+
+  # Trap to ensure cleanup on exit
+  trap "rm -rf '$staging_dir'" EXIT
+
   # Ensure zip is installed in the MSYS2 environment
   if ! command -v zip &> /dev/null; then
-    echo "Installing zip package..."
-    pacman -S --noconfirm zip
+    log "Installing zip package..."
+    install_package zip
   fi
 
   # Ensure sha256sum is installed (provided by coreutils)
   if ! command -v sha256sum &> /dev/null; then
-    echo "Installing coreutils package for sha256sum..."
-    pacman -S --noconfirm coreutils
+    log "Installing coreutils package for sha256sum..."
+    install_package coreutils
   fi
 
-  echo "Step 1: Preparing staging directory..."
+  log "Step 1: Preparing staging directory..."
   # Package binaries into a flat 'bin' directory
   local -r bin_dir="${staging_dir}/bin"
   mkdir -p "${bin_dir}"
@@ -60,29 +99,34 @@ main() {
   fi
 
   # Copy binaries from the install prefix
-  if [[ -d "${install_prefix}/bin" ]]; then
-    cp -r "${install_prefix}/bin/"* "${bin_dir}/"
-  else
+  if [[ ! -d "${install_prefix}/bin" ]]; then
     err "bin directory not found in install prefix: ${install_prefix}/bin"
   fi
+
+  log "Copying binaries from ${install_prefix}/bin..."
+  cp -r "${install_prefix}/bin/"* "${bin_dir}/"
 
   local -r rsync_exe="${bin_dir}/rsync.exe"
   if [[ ! -f "${rsync_exe}" ]]; then
     err "rsync.exe not found at ${rsync_exe}"
   fi
 
-  echo "Step 2: Resolving MSYS DLL dependencies..."
+  log "Step 2: Resolving MSYS DLL dependencies..."
   # We extract actual file paths from ldd output and filter for MSYS DLLs (located in /usr/...).
   # Windows system DLLs (C:\Windows) are inherently present on the target machine and ignored.
+  local dll_count=0
   while IFS= read -r dll_path; do
     if [[ -n "${dll_path}" && -f "${dll_path}" ]]; then
-      echo "  -> Copying dependency: $(basename "${dll_path}")"
-      # Use cp -n to avoid overwriting existing files just in case
-      cp -n "${dll_path}" "${bin_dir}/"
+      log "  -> Copying dependency: $(basename "${dll_path}")"
+      # Use cp -n to avoid overwriting existing files
+      cp -n "${dll_path}" "${bin_dir}/" || true
+      ((dll_count++))
     fi
-  done < <(ldd "${rsync_exe}" | awk '{print $3}' | grep -E '^/usr/.*\.dll$')
+  done < <(ldd "${rsync_exe}" | awk '{print $3}' | grep -E '^/usr/.*\.dll$' | sort -u)
 
-  echo "Step 2.5: Copying readme and versions..."
+  log "Copied $dll_count MSYS DLL dependencies."
+
+  log "Step 2.5: Copying readme and versions..."
   local -r script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" &> /dev/null && pwd)"
   local -r project_root="$(dirname "${script_dir}")"
 
@@ -92,32 +136,29 @@ main() {
     cp "${project_root}/RELEASE_README.md" "${staging_dir}/README.md"
     zip_files+=("README.md")
   else
-    echo "Warning: RELEASE_README.md not found at ${project_root}/RELEASE_README.md"
+    log "Warning: RELEASE_README.md not found at ${project_root}/RELEASE_README.md"
   fi
 
   if [[ -f "${project_root}/RELEASE_VERSIONS.md" ]]; then
     cp "${project_root}/RELEASE_VERSIONS.md" "${staging_dir}/VERSIONS.md"
     zip_files+=("VERSIONS.md")
   else
-    echo "Warning: RELEASE_VERSIONS.md not found at ${project_root}/RELEASE_VERSIONS.md"
+    log "Warning: RELEASE_VERSIONS.md not found at ${project_root}/RELEASE_VERSIONS.md"
   fi
 
-  echo "Step 3: Creating ZIP archive..."
+  log "Step 3: Creating ZIP archive..."
   cd "${staging_dir}"
 
   # Remove an existing zip file if it exists to ensure a clean package
   rm -f "${output_zip}"
   zip -r "${output_zip}" "${zip_files[@]}"
 
-  echo "Step 4: Generating SHA256 checksum..."
+  log "Step 4: Generating SHA256 checksum..."
   # Run sha256sum from the directory where the zip was created to ensure the filename in the hash file is just the basename.
   (cd "$(dirname "${output_zip}")" && sha256sum "$(basename "${output_zip}")" > "$(basename "${output_zip}").sha256")
 
-  echo "Cleaning up staging directory..."
-  cd - > /dev/null
-  rm -rf "${staging_dir}"
-
-  echo "Packaging complete! Archive created at ${output_zip}"
+  log "Packaging complete! Archive created at ${output_zip}"
+  log "Checksum file: ${output_zip}.sha256"
 }
 
 main "$@"

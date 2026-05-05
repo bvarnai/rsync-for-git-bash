@@ -39,6 +39,26 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
 
+      - name: Initialize and clean pacman environment
+        run: |
+          # Get the SDK bash executable path
+          SDK_BASH_PATH=$(which bash)
+          echo "SDK bash location: $SDK_BASH_PATH"
+          
+          # Clean up any existing pacman lock files that might be corrupt
+          if [[ -f "/var/lib/pacman/db.lck" ]]; then
+            echo "Removing stale pacman lock file..."
+            sudo rm -f /var/lib/pacman/db.lck
+          fi
+          
+          # Clear pacman cache to prevent corruption
+          echo "Clearing pacman package cache..."
+          pacman -Sc --noconfirm || true
+          
+          # Initialize pacman database
+          echo "Refreshing pacman package database..."
+          pacman -Sy --noconfirm
+
       - name: Clone Dependencies
         run: |
           mkdir -p workspace
@@ -63,11 +83,17 @@ jobs:
           # Convert GITHUB_WORKSPACE to a path the MSYS2 environment understands
           WORKSPACE_UNIX=$(cygpath -u "${{ github.workspace }}")
           SDK_ROOT_UNIX="$WORKSPACE_UNIX/workspace/git-sdk-64"
+          BUILD_PREFIX="$WORKSPACE_UNIX/build/rsync"
+          
+          # Create the build directory in advance to avoid race conditions
+          mkdir -p "$BUILD_PREFIX"
           
           # Execute the build script directly using the SDK's bash.
           # We prepend MSYSTEM and PATH so the command runs in the correct environment.
           MSYSTEM=MSYS \
           PATH="$SDK_ROOT_UNIX/usr/bin:$PATH" \
+          HOME="$WORKSPACE_UNIX/build" \
+          BUILD_PREFIX="$BUILD_PREFIX" \
           "$SDK_ROOT_UNIX/usr/bin/bash.exe" \
             "$WORKSPACE_UNIX/scripts/build-rsync.sh" \
             "$WORKSPACE_UNIX/workspace/rsync" \
@@ -91,13 +117,16 @@ jobs:
           WORKSPACE_UNIX=$(cygpath -u "${{ github.workspace }}")
           ZIP_NAME="${{ steps.pkg-name.outputs.zip_name }}"
           SDK_ROOT_UNIX="$WORKSPACE_UNIX/workspace/git-sdk-64"
+          BUILD_PREFIX="$WORKSPACE_UNIX/build/rsync"
 
           # Execute the packaging script directly using the SDK's bash.
           MSYSTEM=MSYS \
           PATH="$SDK_ROOT_UNIX/usr/bin:$PATH" \
+          HOME="$WORKSPACE_UNIX/build" \
+          BUILD_PREFIX="$BUILD_PREFIX" \
           "$SDK_ROOT_UNIX/usr/bin/bash.exe" \
             "$WORKSPACE_UNIX/scripts/package-rsync.sh" \
-            "~/build/rsync" \
+            "$BUILD_PREFIX" \
             "$WORKSPACE_UNIX/$ZIP_NAME"
 
       - name: Upload artifacts
