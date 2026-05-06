@@ -1,4 +1,4 @@
-name: Publish to Scoop
+name: Publish to scoop
 on:
   release:
     types: [published]
@@ -25,10 +25,12 @@ jobs:
 
       - name: Update Manifest
         shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           # Use input tag if provided (manual run), otherwise use the release event tag
           TAG_NAME="${{ github.event.inputs.tag_name || github.event.release.tag_name }}"
-          
+
           if [[ -z "$TAG_NAME" ]]; then
             echo "Error: Tag name could not be determined. Provide a tag name if running manually."
             exit 1
@@ -60,15 +62,15 @@ jobs:
           MANIFEST="scoop-bucket/bucket/rsync-for-git-bash.json"
 
           # Update the fields in-place within the checked-out bucket
-          jq ".version = \"$VERSION\" | 
-              .url = \"$ZIP_URL\" | 
+          jq ".version = \"$VERSION\" |
+              .url = \"$ZIP_URL\" |
               .hash = \"$HASH\"" "$MANIFEST" > "$MANIFEST.tmp" && mv "$MANIFEST.tmp" "$MANIFEST"
 
       - name: Commit and Push
         run: |
           # Use input tag if provided (manual run), otherwise use the release event tag
           TAG_NAME="${{ github.event.inputs.tag_name || github.event.release.tag_name }}"
-          
+
           cd scoop-bucket
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
