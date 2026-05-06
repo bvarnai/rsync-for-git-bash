@@ -51,8 +51,6 @@ jobs:
           git remote add origin https://github.com/git-for-windows/git-sdk-64.git
           git fetch origin "${{ inputs.sdk_commit }}" --depth 1
           git checkout FETCH_HEAD
-          git clean -ffdx
-          git reset --hard FETCH_HEAD
           cd ..
 
           echo "Cloning rsync version ${{ inputs.rsync_version }}..."
@@ -62,17 +60,17 @@ jobs:
         shell: cmd
         run: |
           set "SDK_ROOT=%cd%\workspace\git-sdk-64"
-          
+
           :: Get Unix-style paths using the SDK's cygpath
           for /f "tokens=*" %%i in ('%SDK_ROOT%\usr\bin\cygpath -u "%cd%"') do set "WORKSPACE_UNIX=%%i"
-          
+
           set "BUILD_SCRIPT=%WORKSPACE_UNIX%/scripts/build-rsync.sh"
           set "RSYNC_SRC=%WORKSPACE_UNIX%/workspace/rsync"
           set "BUILD_PREFIX=%WORKSPACE_UNIX%/build/rsync"
 
           echo Launching MSYS2 build environment...
           cd /d "%SDK_ROOT%"
-          
+
           :: msys2_shell.cmd initializes the MSYS2 environment properly (subsystems, mount points).
           :: Flags: -msys (MSYS subsystem), -defterm (no mintty), -no-start (synchronous), -here (current dir).
           msys2_shell.cmd -msys -defterm -no-start -here -c "BUILD_PREFIX='%BUILD_PREFIX%' bash '%BUILD_SCRIPT%' '%RSYNC_SRC%' '${{ inputs.rsync_version }}'"
@@ -92,17 +90,17 @@ jobs:
         shell: cmd
         run: |
           set "SDK_ROOT=%cd%\workspace\git-sdk-64"
-          
+
           :: Get Unix-style paths using the SDK's cygpath
           for /f "tokens=*" %%i in ('%SDK_ROOT%\usr\bin\cygpath -u "%cd%"') do set "WORKSPACE_UNIX=%%i"
-          
+
           set "PACKAGE_SCRIPT=%WORKSPACE_UNIX%/scripts/package-rsync.sh"
           set "BUILD_PREFIX=%WORKSPACE_UNIX%/build/rsync"
           set "ZIP_NAME=${{ steps.pkg-name.outputs.zip_name }}"
 
           echo Launching MSYS2 packaging environment...
           cd /d "%SDK_ROOT%"
-          
+
           msys2_shell.cmd -msys -defterm -no-start -here -c "bash '%PACKAGE_SCRIPT%' '%BUILD_PREFIX%' '%WORKSPACE_UNIX%/%ZIP_NAME%'"
 
       - name: Upload artifacts

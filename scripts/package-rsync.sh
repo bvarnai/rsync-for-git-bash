@@ -104,7 +104,7 @@ main() {
   fi
 
   log "Copying binaries from ${install_prefix}/bin..."
-  cp -r "${install_prefix}/bin/"* "${bin_dir}/"
+  cp -rv "${install_prefix}/bin/"* "${bin_dir}/"
 
   local -r rsync_exe="${bin_dir}/rsync.exe"
   if [[ ! -f "${rsync_exe}" ]]; then
@@ -114,15 +114,26 @@ main() {
   log "Step 2: Resolving MSYS DLL dependencies..."
   # We extract actual file paths from ldd output and filter for MSYS DLLs (located in /usr/...).
   # Windows system DLLs (C:\Windows) are inherently present on the target machine and ignored.
+  
+  # Use a temporary file to store ldd output for better diagnostics if it fails
+  local -r ldd_output="$(mktemp)"
+  if ! ldd "${rsync_exe}" > "${ldd_output}"; then
+    cat "${ldd_output}" >&2
+    err "ldd failed on ${rsync_exe}"
+  fi
+
   local dll_count=0
   while IFS= read -r dll_path; do
     if [[ -n "${dll_path}" && -f "${dll_path}" ]]; then
       log "  -> Copying dependency: $(basename "${dll_path}")"
-      # Use cp -n to avoid overwriting existing files
-      cp -n "${dll_path}" "${bin_dir}/" || true
+      # Use cp -v to see the copy action in the log.
+      # We don't use -n here because we want to know if it fails, 
+      # and in a fresh staging dir there should be no conflicts.
+      cp -v "${dll_path}" "${bin_dir}/"
       ((dll_count++))
     fi
-  done < <(ldd "${rsync_exe}" | awk '{print $3}' | grep -E '^/usr/.*\.dll$' | sort -u)
+  done < <(grep -E '^/usr/.*\.dll$' "${ldd_output}" | awk '{print $3}' | sort -u)
+  rm -f "${ldd_output}"
 
   log "Copied $dll_count MSYS DLL dependencies."
 
