@@ -40,21 +40,25 @@ This allows you to easily match the `rsync` build to the specific version of Git
 
 ## Installation
 
-### Manual
-1.  Go to the project's **Releases** page.
-2.  Download the `.zip` archive that matches your needs.
-3.  Extract the archive. It will contain a `bin` directory.
-4.  Copy the contents of the `bin` directory (`rsync.exe` and several `.dll` files) to a location in your `PATH` (e.g., `~/bin` or `/usr/local/bin` inside Git Bash).
-5.  Ensure this location appears in your `PATH` before other Git directories. You can check with `echo $PATH`.
-6.  Open a new Git Bash terminal and verify the installation with `rsync --version`.
-
-### Scoop
+### Scoop (Recommended)
 You can install `rsync-for-git-bash` using [Scoop](https://scoop.sh/):
 
 ```powershell
+# Add the bucket
 scoop bucket add bvarnai-bucket https://github.com/bvarnai/scoop-bucket
+
+# Install the package
 scoop install bvarnai-bucket/rsync-for-git-bash
 ```
+
+### Manual
+1.  Go to the project's **Releases** page.
+2.  Download the `.zip` archive that matches your version of Git for Windows.
+3.  Extract the archive to a dedicated directory of your choice (e.g., `C:\tools\rsync-git-bash` or `~/rsync-git-bash` in Git Bash).
+4.  Add the `bin` subdirectory of the extracted folder to your `PATH`.
+    *   **In Git Bash**: Add `export PATH="$HOME/rsync-git-bash/bin:$PATH"` to your `~/.bashrc`.
+    *   **In Windows**: Update your Environment Variables to include the absolute path to the `bin` folder.
+5.  Open a new Git Bash terminal and verify the installation with `rsync --version`.
 
 ## 🤖 AI Disclosure
 
