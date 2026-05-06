@@ -59,27 +59,23 @@ jobs:
           git clone --depth 1 --branch "v${{ inputs.rsync_version }}" https://github.com/RsyncProject/rsync.git
 
       - name: Build rsync
+        shell: cmd
         run: |
-          echo "Dependencies are ready. Proceeding with MSYS2 build..."
+          set "SDK_ROOT=%cd%\workspace\git-sdk-64"
+          
+          :: Get Unix-style paths using the SDK's cygpath
+          for /f "tokens=*" %%i in ('%SDK_ROOT%\usr\bin\cygpath -u "%cd%"') do set "WORKSPACE_UNIX=%%i"
+          
+          set "BUILD_SCRIPT=%WORKSPACE_UNIX%/scripts/build-rsync.sh"
+          set "RSYNC_SRC=%WORKSPACE_UNIX%/workspace/rsync"
+          set "BUILD_PREFIX=%WORKSPACE_UNIX%/build/rsync"
 
-          # Convert GITHUB_WORKSPACE to a path the MSYS2 environment understands
-          WORKSPACE_UNIX=$(cygpath -u "${{ github.workspace }}")
-          SDK_ROOT_UNIX="$WORKSPACE_UNIX/workspace/git-sdk-64"
-          BUILD_PREFIX="$WORKSPACE_UNIX/build/rsync"
-
-          # Create the build directory in advance to avoid race conditions
-          mkdir -p "$BUILD_PREFIX"
-
-          # Execute the build script directly using the SDK's bash.
-          # We prepend MSYSTEM and PATH so the command runs in the correct environment.
-          MSYSTEM=MSYS \
-          PATH="$SDK_ROOT_UNIX/usr/bin:$PATH" \
-          HOME="$WORKSPACE_UNIX/build" \
-          BUILD_PREFIX="$BUILD_PREFIX" \
-          "$SDK_ROOT_UNIX/usr/bin/bash.exe" \
-            "$WORKSPACE_UNIX/scripts/build-rsync.sh" \
-            "$WORKSPACE_UNIX/workspace/rsync" \
-            "${{ inputs.rsync_version }}"
+          echo Launching MSYS2 build environment...
+          cd /d "%SDK_ROOT%"
+          
+          :: msys2_shell.cmd initializes the MSYS2 environment properly (subsystems, mount points).
+          :: Flags: -msys (MSYS subsystem), -defterm (no mintty), -no-start (synchronous), -here (current dir).
+          msys2_shell.cmd -msys -defterm -no-start -here -c "BUILD_PREFIX='%BUILD_PREFIX%' bash '%BUILD_SCRIPT%' '%RSYNC_SRC%' '${{ inputs.rsync_version }}'"
 
       - name: Generate versions
         run: |
@@ -93,23 +89,21 @@ jobs:
           echo "zip_name=$ZIP_NAME" >> $GITHUB_OUTPUT
 
       - name: Package rsync
+        shell: cmd
         run: |
-          echo "Packaging rsync distribution..."
+          set "SDK_ROOT=%cd%\workspace\git-sdk-64"
+          
+          :: Get Unix-style paths using the SDK's cygpath
+          for /f "tokens=*" %%i in ('%SDK_ROOT%\usr\bin\cygpath -u "%cd%"') do set "WORKSPACE_UNIX=%%i"
+          
+          set "PACKAGE_SCRIPT=%WORKSPACE_UNIX%/scripts/package-rsync.sh"
+          set "BUILD_PREFIX=%WORKSPACE_UNIX%/build/rsync"
+          set "ZIP_NAME=${{ steps.pkg-name.outputs.zip_name }}"
 
-          WORKSPACE_UNIX=$(cygpath -u "${{ github.workspace }}")
-          ZIP_NAME="${{ steps.pkg-name.outputs.zip_name }}"
-          SDK_ROOT_UNIX="$WORKSPACE_UNIX/workspace/git-sdk-64"
-          BUILD_PREFIX="$WORKSPACE_UNIX/build/rsync"
-
-          # Execute the packaging script directly using the SDK's bash.
-          MSYSTEM=MSYS \
-          PATH="$SDK_ROOT_UNIX/usr/bin:$PATH" \
-          HOME="$WORKSPACE_UNIX/build" \
-          BUILD_PREFIX="$BUILD_PREFIX" \
-          "$SDK_ROOT_UNIX/usr/bin/bash.exe" \
-            "$WORKSPACE_UNIX/scripts/package-rsync.sh" \
-            "$BUILD_PREFIX" \
-            "$WORKSPACE_UNIX/$ZIP_NAME"
+          echo Launching MSYS2 packaging environment...
+          cd /d "%SDK_ROOT%"
+          
+          msys2_shell.cmd -msys -defterm -no-start -here -c "bash '%PACKAGE_SCRIPT%' '%BUILD_PREFIX%' '%WORKSPACE_UNIX%/%ZIP_NAME%'"
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
