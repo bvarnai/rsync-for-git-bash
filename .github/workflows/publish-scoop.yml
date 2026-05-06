@@ -2,6 +2,12 @@ name: Publish to Scoop
 on:
   release:
     types: [published]
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: 'Release tag to publish to Scoop (e.g. rsync-3.4.2-for-git-2.54.0.windows.1)'
+        required: false
+        type: string
 
 jobs:
   Update-Bucket:
@@ -20,8 +26,15 @@ jobs:
       - name: Update Manifest
         shell: bash
         run: |
-          # Extract information from the release event
-          TAG_NAME="${{ github.event.release.tag_name }}"
+          # Use input tag if provided (manual run), otherwise use the release event tag
+          TAG_NAME="${{ github.event.inputs.tag_name || github.event.release.tag_name }}"
+          
+          if [[ -z "$TAG_NAME" ]]; then
+            echo "Error: Tag name could not be determined. Provide a tag name if running manually."
+            exit 1
+          fi
+
+          echo "Processing publication for tag: $TAG_NAME"
 
           # Find the ZIP asset and its SHA256 asset
           ASSETS=$(gh release view "$TAG_NAME" --repo "${{ github.repository }}" --json assets --jq '.assets[]')
@@ -41,7 +54,7 @@ jobs:
           # Use the rsync version as the primary version
           VERSION=$(echo "$TAG_NAME" | sed -E 's/rsync-([0-9.]+)-for-git-.*/\1/')
 
-          echo "Updating manifest for version $VERSION (Tag: $TAG_NAME)..."
+          echo "Updating manifest for version $VERSION..."
 
           # The manifest now lives in the bucket repository
           MANIFEST="scoop-bucket/bucket/rsync-for-git-bash.json"
@@ -53,11 +66,14 @@ jobs:
 
       - name: Commit and Push
         run: |
+          # Use input tag if provided (manual run), otherwise use the release event tag
+          TAG_NAME="${{ github.event.inputs.tag_name || github.event.release.tag_name }}"
+          
           cd scoop-bucket
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add .
-          git commit -m "Update rsync-for-git-bash to ${{ github.event.release.tag_name }}" || echo "No changes to commit"
+          git commit -m "Update rsync-for-git-bash to $TAG_NAME" || echo "No changes to commit"
           git push
         env:
           GITHUB_TOKEN: ${{ secrets.SCOOP_BUCKET_PAT }}
