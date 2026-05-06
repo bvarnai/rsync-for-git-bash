@@ -50,8 +50,22 @@ jobs:
           fi
 
           # Download the SHA256 file to get the hash
-          curl -L -s "$SHA_URL" -o release.sha256
+          echo "Downloading SHA256 from $SHA_URL..."
+          curl -fL -s "$SHA_URL" -o release.sha256
+
+          # Check if the file is empty or missing
+          if [[ ! -s release.sha256 ]]; then
+            echo "Error: SHA256 file is empty or could not be downloaded."
+            exit 1
+          fi
+
           HASH=$(awk '{print $1}' release.sha256)
+          echo "Extracted Hash: $HASH"
+
+          if [[ -z "$HASH" ]]; then
+            echo "Error: Could not extract hash from release.sha256"
+            exit 1
+          fi
 
           # Use the rsync version as the primary version
           VERSION=$(echo "$TAG_NAME" | sed -E 's/rsync-([0-9.]+)-for-git-.*/\1/')
@@ -62,10 +76,12 @@ jobs:
           MANIFEST="scoop-bucket/bucket/rsync-for-git-bash.json"
 
           # Update the fields in-place within the checked-out bucket
-          jq ".version = \"$VERSION\" |
-              .url = \"$ZIP_URL\" |
-              .hash = \"$HASH\"" "$MANIFEST" > "$MANIFEST.tmp" && mv "$MANIFEST.tmp" "$MANIFEST"
-
+          # Using --arg for safer variable substitution in jq
+          jq --arg ver "$VERSION" \
+             --arg url "$ZIP_URL" \
+             --arg hash "$HASH" \
+             '.version = $ver | .url = $url | .hash = $hash' \
+             "$MANIFEST" > "$MANIFEST.tmp" && mv "$MANIFEST.tmp" "$MANIFEST"
       - name: Commit and Push
         run: |
           # Use input tag if provided (manual run), otherwise use the release event tag
