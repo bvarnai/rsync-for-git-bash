@@ -39,7 +39,7 @@ install_packages() {
     fi
 
     log "Attempting to install packages: ${packages[*]}"
-    if pacman -S --noconfirm "${packages[@]}"; then
+    if pacman -Sy --noconfirm "${packages[@]}"; then
       log "Packages installed successfully."
       return 0
     fi

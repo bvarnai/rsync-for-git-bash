@@ -1,0 +1,15 @@
+# Build and dependency directories
+deps/
+workspace/
+build/
+dist/
+
+# Generated build artifacts
+RELEASE_VERSIONS.md
+*.zip
+*.zip.sha256
+
+# Temporary / editor files
+*.tmp
+.DS_Store
+Thumbs.db

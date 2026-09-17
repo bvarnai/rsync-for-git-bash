@@ -37,7 +37,7 @@ install_package() {
       rm -f /var/lib/pacman/db.lck
     fi
 
-    if pacman -S --noconfirm "$package"; then
+    if pacman -Sy --noconfirm "$package"; then
       log "Package '$package' installed successfully."
       return 0
     fi
@@ -126,13 +126,11 @@ main() {
   while IFS= read -r dll_path; do
     if [[ -n "${dll_path}" && -f "${dll_path}" ]]; then
       log "  -> Copying dependency: $(basename "${dll_path}")"
-      # Use cp -v to see the copy action in the log.
-      # We don't use -n here because we want to know if it fails, 
-      # and in a fresh staging dir there should be no conflicts.
       cp -v "${dll_path}" "${bin_dir}/"
-      ((dll_count++))
+      cp -v "${dll_path}" "${install_prefix}/bin/" || true
+      dll_count=$((dll_count + 1))
     fi
-  done < <(grep -E '^/usr/.*\.dll$' "${ldd_output}" | awk '{print $3}' | sort -u)
+  done < <(awk '$3 ~ /^\/usr\/.*\.dll$/ {print $3}' "${ldd_output}" | sort -u)
   rm -f "${ldd_output}"
 
   log "Copied $dll_count MSYS DLL dependencies."

@@ -39,46 +39,19 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
 
-      - name: Clone Dependencies
+      - name: Setup Dependencies
         run: |
-          mkdir -p workspace
-          cd workspace
-
-          echo "Fetching specific git-sdk-64 commit..."
-          mkdir git-sdk-64
-          cd git-sdk-64
-          git init
-          git remote add origin https://github.com/git-for-windows/git-sdk-64.git
-          git fetch origin "${{ inputs.sdk_commit }}" --depth 1
-          git checkout FETCH_HEAD
-          cd ..
-
-          echo "Cloning rsync version ${{ inputs.rsync_version }}..."
-          git clone --depth 1 --branch "v${{ inputs.rsync_version }}" https://github.com/RsyncProject/rsync.git
+          bash ./scripts/setup-deps.sh "${{ inputs.rsync_version }}" "${{ inputs.sdk_commit }}"
 
       - name: Build rsync
-        shell: cmd
         run: |
-          set "SDK_ROOT=%cd%\workspace\git-sdk-64"
-
-          :: Get Unix-style paths using the SDK's cygpath
-          for /f "tokens=*" %%i in ('%SDK_ROOT%\usr\bin\cygpath -u "%cd%"') do set "WORKSPACE_UNIX=%%i"
-
-          set "BUILD_SCRIPT=%WORKSPACE_UNIX%/scripts/build-rsync.sh"
-          set "RSYNC_SRC=%WORKSPACE_UNIX%/workspace/rsync"
-          set "BUILD_PREFIX=%WORKSPACE_UNIX%/build/rsync"
-
-          echo Launching MSYS2 build environment...
-          cd /d "%SDK_ROOT%"
-
-          :: msys2_shell.cmd initializes the MSYS2 environment properly (subsystems, mount points).
-          :: Flags: -msys (MSYS subsystem), -defterm (no mintty), -no-start (synchronous), -here (current dir).
-          msys2_shell.cmd -msys -defterm -no-start -here -c "BUILD_PREFIX='%BUILD_PREFIX%' bash '%BUILD_SCRIPT%' '%RSYNC_SRC%' '${{ inputs.rsync_version }}'"
+          REPO_ROOT_UNIX="$(cygpath -u "$PWD")"
+          bash ./scripts/run-in-sdk.sh \
+            "BUILD_PREFIX='${REPO_ROOT_UNIX}/build/rsync' bash '${REPO_ROOT_UNIX}/scripts/build-rsync.sh' '${REPO_ROOT_UNIX}/deps/rsync' '${{ inputs.rsync_version }}'"
 
       - name: Generate versions
         run: |
-          GIT_VER="${{ inputs.git_version }}"
-          bash ./scripts/generate-versions-md.sh "$GIT_VER" workspace/rsync workspace/git-sdk-64 RELEASE_VERSIONS.md
+          bash ./scripts/generate-versions-md.sh "${{ inputs.git_version }}" deps/rsync deps/git-sdk-64 RELEASE_VERSIONS.md
 
       - name: Determine package name
         id: pkg-name
@@ -87,26 +60,16 @@ jobs:
           echo "zip_name=$ZIP_NAME" >> $GITHUB_OUTPUT
 
       - name: Package rsync
-        shell: cmd
         run: |
-          set "SDK_ROOT=%cd%\workspace\git-sdk-64"
-
-          :: Get Unix-style paths using the SDK's cygpath
-          for /f "tokens=*" %%i in ('%SDK_ROOT%\usr\bin\cygpath -u "%cd%"') do set "WORKSPACE_UNIX=%%i"
-
-          set "PACKAGE_SCRIPT=%WORKSPACE_UNIX%/scripts/package-rsync.sh"
-          set "BUILD_PREFIX=%WORKSPACE_UNIX%/build/rsync"
-          set "ZIP_NAME=${{ steps.pkg-name.outputs.zip_name }}"
-
-          echo Launching MSYS2 packaging environment...
-          cd /d "%SDK_ROOT%"
-
-          msys2_shell.cmd -msys -defterm -no-start -here -c "bash '%PACKAGE_SCRIPT%' '%BUILD_PREFIX%' '%WORKSPACE_UNIX%/%ZIP_NAME%'"
+          mkdir -p dist
+          REPO_ROOT_UNIX="$(cygpath -u "$PWD")"
+          bash ./scripts/run-in-sdk.sh \
+            "bash '${REPO_ROOT_UNIX}/scripts/package-rsync.sh' '${REPO_ROOT_UNIX}/build/rsync' '${REPO_ROOT_UNIX}/dist/${{ steps.pkg-name.outputs.zip_name }}'"
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: ${{ steps.pkg-name.outputs.zip_name }}
           path: |
-            ${{ steps.pkg-name.outputs.zip_name }}
-            ${{ steps.pkg-name.outputs.zip_name }}.sha256
+            dist/${{ steps.pkg-name.outputs.zip_name }}
+            dist/${{ steps.pkg-name.outputs.zip_name }}.sha256
