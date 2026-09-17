@@ -1,6 +1,5 @@
 # Build and dependency directories
 deps/
-workspace/
 build/
 dist/
 

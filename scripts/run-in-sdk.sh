@@ -28,8 +28,6 @@ if [[ $# -ge 2 && -n "$2" ]]; then
   readonly SDK_ROOT="$(realpath "$2")"
 elif [[ -d "${REPO_ROOT}/deps/git-sdk-64" ]]; then
   readonly SDK_ROOT="${REPO_ROOT}/deps/git-sdk-64"
-elif [[ -d "${REPO_ROOT}/workspace/git-sdk-64" ]]; then
-  readonly SDK_ROOT="${REPO_ROOT}/workspace/git-sdk-64"
 else
   echo "Error: git-sdk-64 directory not found. Run scripts/setup-deps.sh first." >&2
   exit 1
