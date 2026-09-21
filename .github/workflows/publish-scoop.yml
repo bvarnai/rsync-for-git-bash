@@ -91,7 +91,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add .
-          git commit -m "Update rsync-for-git-bash to $TAG_NAME" || echo "No changes to commit"
+          git commit -m "rsync-for-git-bash: Update to version $TAG_NAME" || echo "No changes to commit"
           git push
         env:
           GITHUB_TOKEN: ${{ secrets.SCOOP_BUCKET_PAT }}
