@@ -126,6 +126,7 @@ main() {
     --prefix="${build_prefix}" \
     --disable-acl-support \
     --disable-xattr-support \
+    --disable-idn \
     --disable-md2man
 
   log "Step 3: Building rsync..."

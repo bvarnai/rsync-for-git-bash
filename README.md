@@ -25,6 +25,7 @@ This build of `rsync` is configured to be a lean, compatible tool for the Git fo
 | ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `--disable-acl-support`   | POSIX Access Control Lists (ACLs) do not translate well to Windows NTFS ACLs and can cause unexpected behavior. This feature is disabled for simplicity and reliability. |
 | `--disable-xattr-support` | Extended file attributes (`xattr`) are not commonly used or consistently supported on Windows filesystems. This is disabled to prevent compatibility issues.             |
+| `--disable-idn`           | Disables Internationalized Domain Names (IDN) support to avoid unnecessary external library dependencies in Git Bash.                                                   |
 | `--disable-md2man`        | Prevents the generation of man pages. Git for Windows does not include the `man` command by default. For documentation, please refer to the official rsync website. |
 
 ## Versioning
