@@ -39,6 +39,13 @@ The releases use a hybrid versioning scheme to uniquely identify the build artif
 
 This allows you to easily match the `rsync` build to the specific version of Git for Windows you have installed.
 
+### Scoop Package Versioning
+
+Scoop requires monotonic numeric versions to detect upgrades across both upstreams. For the Scoop manifest in [`bvarnai/scoop-bucket`](https://github.com/bvarnai/scoop-bucket), the version number is encoded as `<rsync_version>.<encoded_git_version>`:
+
+- Example: **`3.5.1.256002`** (Rsync `3.5.1` built against Git for Windows `2.56.0.windows.2`).
+- The last digits encode the Git for Windows version (`<major><minor:2><patch:1><build:2>`), ensuring Scoop triggers an update whenever either Rsync or the Git SDK runtime baseline changes.
+
 ## Installation
 
 ### Scoop (Recommended)

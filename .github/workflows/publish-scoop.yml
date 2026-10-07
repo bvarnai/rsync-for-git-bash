@@ -12,9 +12,13 @@ on:
 jobs:
   Update-Bucket:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Checkout Bucket
         uses: actions/checkout@v4
@@ -67,8 +71,8 @@ jobs:
             exit 1
           fi
 
-          # Use the rsync version as the primary version
-          VERSION=$(echo "$TAG_NAME" | sed -E 's/rsync-([0-9.]+)-for-git-.*/\1/')
+          # Compute dual-upstream Scoop version: <rsync-version>.<encoded-git-version>
+          VERSION=$(bash scripts/format-scoop-version.sh "$TAG_NAME")
 
           echo "Updating manifest for version $VERSION..."
 
@@ -82,16 +86,33 @@ jobs:
              --arg hash "$HASH" \
              '.version = $ver | .url = $url | .hash = $hash' \
              "$MANIFEST" > "$MANIFEST.tmp" && mv "$MANIFEST.tmp" "$MANIFEST"
-      - name: Commit and Push
+      - name: Commit and Push to Bucket
         run: |
           # Use input tag if provided (manual run), otherwise use the release event tag
           TAG_NAME="${{ github.event.inputs.tag_name || github.event.release.tag_name }}"
+          VERSION=$(bash scripts/format-scoop-version.sh "$TAG_NAME")
 
           cd scoop-bucket
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add .
-          git commit -m "rsync-for-git-bash: Update to version $TAG_NAME" || echo "No changes to commit"
+          git commit -m "rsync-for-git-bash: Update to version $VERSION ($TAG_NAME)" || echo "No changes to commit"
           git push
         env:
           GITHUB_TOKEN: ${{ secrets.SCOOP_BUCKET_PAT }}
+
+      - name: Create and Push Scoop Version Tag
+        run: |
+          TAG_NAME="${{ github.event.inputs.tag_name || github.event.release.tag_name }}"
+          VERSION=$(bash scripts/format-scoop-version.sh "$TAG_NAME")
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          if ! git rev-parse "$VERSION" >/dev/null 2>&1; then
+            echo "Creating tag $VERSION on target commit of $TAG_NAME"
+            git tag "$VERSION" "$TAG_NAME"
+            git push origin "$VERSION"
+          else
+            echo "Tag $VERSION already exists"
+          fi
