@@ -70,6 +70,10 @@ scoop install bvarnai-bucket/rsync-for-git-bash
    - **Windows:** Add the absolute path to the `bin` folder to your Environment Variables.
 5. Open a new Git Bash terminal and verify with `rsync --version`.
 
+## Building from source
+
+To reproduce a build locally on Windows, see [BUILDING.md](BUILDING.md).
+
 ---
 
 ## 🤖 AI Disclosure
