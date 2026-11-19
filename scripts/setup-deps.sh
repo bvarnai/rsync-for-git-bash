@@ -26,14 +26,17 @@ fi
 
 readonly RSYNC_VER="${1#v}"
 readonly SDK_COMMIT="$2"
-readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" &> /dev/null && pwd)"
-readonly REPO_ROOT="$(cd "${SCRIPT_DIR}/.." &> /dev/null && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" &> /dev/null && pwd)"
+readonly SCRIPT_DIR
+REPO_ROOT="$(cd "${SCRIPT_DIR}/.." &> /dev/null && pwd)"
+readonly REPO_ROOT
 
 if [[ $# -ge 3 && -n "$3" ]]; then
-  readonly DEPS_DIR="$(realpath "$3")"
+  DEPS_DIR="$(realpath "$3")"
 else
-  readonly DEPS_DIR="${REPO_ROOT}/deps"
+  DEPS_DIR="${REPO_ROOT}/deps"
 fi
+readonly DEPS_DIR
 
 mkdir -p "${DEPS_DIR}"
 

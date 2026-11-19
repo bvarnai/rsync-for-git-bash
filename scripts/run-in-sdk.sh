@@ -21,17 +21,20 @@ if [[ $# -lt 1 ]]; then
 fi
 
 readonly CMD_TO_RUN="$1"
-readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" &> /dev/null && pwd)"
-readonly REPO_ROOT="$(cd "${SCRIPT_DIR}/.." &> /dev/null && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" &> /dev/null && pwd)"
+readonly SCRIPT_DIR
+REPO_ROOT="$(cd "${SCRIPT_DIR}/.." &> /dev/null && pwd)"
+readonly REPO_ROOT
 
 if [[ $# -ge 2 && -n "$2" ]]; then
-  readonly SDK_ROOT="$(realpath "$2")"
+  SDK_ROOT="$(realpath "$2")"
 elif [[ -d "${REPO_ROOT}/deps/git-sdk-64" ]]; then
-  readonly SDK_ROOT="${REPO_ROOT}/deps/git-sdk-64"
+  SDK_ROOT="${REPO_ROOT}/deps/git-sdk-64"
 else
   echo "Error: git-sdk-64 directory not found. Run scripts/setup-deps.sh first." >&2
   exit 1
 fi
+readonly SDK_ROOT
 
 if [[ ! -f "${SDK_ROOT}/msys2_shell.cmd" ]]; then
   echo "Error: msys2_shell.cmd not found in ${SDK_ROOT}" >&2

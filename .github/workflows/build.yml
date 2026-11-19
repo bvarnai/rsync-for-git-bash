@@ -6,7 +6,7 @@ on:
 
 jobs:
   Resolve-Parameters:
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
     defaults:
       run:
         shell: bash
@@ -20,53 +20,56 @@ jobs:
 
       - name: Determine latest rsync version
         id: rsync-version
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          RSYNC_TAG=$(curl -s https://api.github.com/repos/RsyncProject/rsync/releases/latest | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
-          if [ -z "$RSYNC_TAG" ]; then
-             RSYNC_TAG=$(curl -s "https://api.github.com/repos/RsyncProject/rsync/tags" | grep '"name":' | head -n 1 | sed -E 's/.*"([^"]+)".*/\1/')
+          RSYNC_TAG=$(curl -sS -H "Authorization: Bearer ${GITHUB_TOKEN}" https://api.github.com/repos/RsyncProject/rsync/releases/latest | grep '"tag_name":' | head -n 1 | sed -E 's/.*"([^"]+)".*/\1/' || true)
+          if [[ -z "${RSYNC_TAG}" ]]; then
+            RSYNC_TAG=$(curl -sS -H "Authorization: Bearer ${GITHUB_TOKEN}" "https://api.github.com/repos/RsyncProject/rsync/tags" | grep '"name":' | head -n 1 | sed -E 's/.*"([^"]+)".*/\1/' || true)
           fi
-          RSYNC_VER=${RSYNC_TAG#v}
-          echo "Latest rsync version: $RSYNC_VER"
-          echo "version=$RSYNC_VER" >> $GITHUB_OUTPUT
+          RSYNC_VER="${RSYNC_TAG#v}"
+          if [[ -z "${RSYNC_VER}" ]]; then
+            echo "Error: Failed to determine latest rsync version." >&2
+            exit 1
+          fi
+          echo "Latest rsync version: ${RSYNC_VER}"
+          echo "version=${RSYNC_VER}" >> "${GITHUB_OUTPUT}"
 
       - name: Determine target Git version
         id: git-version
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           # Fetch latest release tag from Git for Windows
-          GIT_VER=$(curl -s https://api.github.com/repos/git-for-windows/git/releases/latest | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
+          GIT_VER=$(curl -sS -H "Authorization: Bearer ${GITHUB_TOKEN}" https://api.github.com/repos/git-for-windows/git/releases/latest | grep '"tag_name":' | head -n 1 | sed -E 's/.*"([^"]+)".*/\1/' || true)
           # Strip the 'v' prefix if present
-          GIT_VER=${GIT_VER#v}
-          echo "Target Git version: $GIT_VER"
-          echo "version=$GIT_VER" >> $GITHUB_OUTPUT
-
-      - name: Clone dependencies for SDK resolution
-        run: |
-          mkdir -p workspace
-          cd workspace
-
-          echo "Cloning build-extra (shallow)..."
-          git clone --depth 1 https://github.com/git-for-windows/build-extra.git
-
-          echo "Cloning git-sdk-64 (shallow history, but enough to search recent commits)..."
-          git clone --depth 100 https://github.com/git-for-windows/git-sdk-64.git
+          GIT_VER="${GIT_VER#v}"
+          if [[ -z "${GIT_VER}" ]]; then
+            echo "Error: Failed to determine target Git for Windows version." >&2
+            exit 1
+          fi
+          echo "Target Git version: ${GIT_VER}"
+          echo "version=${GIT_VER}" >> "${GITHUB_OUTPUT}"
 
       - name: Resolve SDK commit
         id: resolve-sdk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           GIT_VER="${{ steps.git-version.outputs.version }}"
 
-          OUTPUT=$(bash ./scripts/find-sdk-commit.sh "$GIT_VER" workspace)
-          echo "$OUTPUT"
+          OUTPUT=$(bash ./scripts/find-sdk-commit.sh "${GIT_VER}")
+          echo "${OUTPUT}"
 
-          SDK_COMMIT=$(echo "$OUTPUT" | grep "^SDK Commit:" | awk '{print $3}')
+          SDK_COMMIT=$(echo "${OUTPUT}" | grep "^SDK Commit:" | awk '{print $3}' | tr -d '\r' | xargs)
 
-          if [[ -z "$SDK_COMMIT" ]]; then
-            echo "Failed to resolve SDK commit."
+          if [[ -z "${SDK_COMMIT}" ]]; then
+            echo "Failed to resolve SDK commit." >&2
             exit 1
           fi
 
-          echo "Resolved SDK commit: $SDK_COMMIT"
-          echo "sdk_commit=$SDK_COMMIT" >> $GITHUB_OUTPUT
+          echo "Resolved SDK commit: ${SDK_COMMIT}"
+          echo "sdk_commit=${SDK_COMMIT}" >> "${GITHUB_OUTPUT}"
 
   Call-Build-Workflow:
     needs: Resolve-Parameters
