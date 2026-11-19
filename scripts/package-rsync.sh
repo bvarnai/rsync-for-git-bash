@@ -68,14 +68,15 @@ main() {
 
   local -r install_prefix="$1"
   local -r output_zip="$2"
-  local -r staging_dir="$(mktemp -d)"
+  STAGING_DIR="$(mktemp -d)"
+  local -r staging_dir="${STAGING_DIR}"
 
   log "Install prefix: $install_prefix"
   log "Output zip: $output_zip"
   log "Staging directory: $staging_dir"
 
   # Trap to ensure cleanup on exit
-  trap "rm -rf '$staging_dir'" EXIT
+  trap 'rm -rf -- "${STAGING_DIR}"' EXIT INT TERM
 
   # Ensure zip is installed in the MSYS2 environment
   if ! command -v zip &> /dev/null; then
@@ -153,6 +154,13 @@ main() {
     zip_files+=("VERSIONS.md")
   else
     log "Warning: RELEASE_VERSIONS.md not found at ${project_root}/RELEASE_VERSIONS.md"
+  fi
+
+  if [[ -f "${project_root}/LICENSE" ]]; then
+    cp "${project_root}/LICENSE" "${staging_dir}/LICENSE"
+    zip_files+=("LICENSE")
+  else
+    log "Warning: LICENSE not found at ${project_root}/LICENSE"
   fi
 
   log "Step 3: Creating ZIP archive..."
