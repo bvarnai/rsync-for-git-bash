@@ -1,6 +1,6 @@
 # rsync-for-git-bash
 
-A specialized build of [`rsync`](https://rsync.samba.org/) linked against the specific `msys-2.0.dll` runtime used by a corresponding [Git for Windows](https://gitforwindows.org/) release.
+Unmodified upstream builds of [`rsync`](https://rsync.samba.org/) linked against the `msys-2.0.dll` runtime used by each [Git for Windows](https://gitforwindows.org/) release.
 
 ## Problem
 
