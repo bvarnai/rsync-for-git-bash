@@ -34,15 +34,26 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" &> /dev/null && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." &> /dev/null && pwd)"
 cd "${REPO_ROOT}"
 
+# Perform a GitHub API GET request, authenticating when GITHUB_TOKEN or GH_TOKEN is set.
+gh_api_get() {
+  local url="$1"
+  local token="${GITHUB_TOKEN:-${GH_TOKEN:-}}"
+  if [[ -n "${token}" ]]; then
+    curl -sS -H "Authorization: Bearer ${token}" "${url}" || true
+  else
+    curl -sS "${url}" || true
+  fi
+}
+
 # Helper to fetch latest tag from a GitHub repo
 get_latest_tag() {
   local repo="$1"
-  local tag
-  tag=$(curl -s "https://api.github.com/repos/${repo}/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/' || true)
-  if [[ -z "$tag" ]]; then
-    tag=$(curl -s "https://api.github.com/repos/${repo}/tags" | grep '"name":' | head -n 1 | sed -E 's/.*"([^"]+)".*/\1/' || true)
+  local tag=""
+  tag=$(gh_api_get "https://api.github.com/repos/${repo}/releases/latest" | grep '"tag_name":' | head -n 1 | sed -E 's/.*"([^"]+)".*/\1/' || true)
+  if [[ -z "${tag}" ]]; then
+    tag=$(gh_api_get "https://api.github.com/repos/${repo}/tags" | grep '"name":' | head -n 1 | sed -E 's/.*"([^"]+)".*/\1/' || true)
   fi
-  echo "$tag"
+  echo "${tag}"
 }
 
 # 1. Determine versions
