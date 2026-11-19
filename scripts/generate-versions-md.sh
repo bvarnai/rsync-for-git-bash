@@ -46,11 +46,11 @@ if [[ -z "${GIT_COMMIT}" ]]; then
 fi
 
 cat <<EOF > "${OUTPUT_FILE}"
-# Build Components & Versions
+# Build components & versions
 
 This package was built using the following components and exact commits to guarantee runtime compatibility with Git for Windows.
 
-| Component | Version / Tag | Commit Hash |
+| Component | Version / tag | Commit hash |
 | :--- | :--- | :--- |
 | **Git for Windows** | \`${GIT_VER}\` | \`${GIT_COMMIT}\` |
 | **git-sdk-64** | - | \`${SDK_COMMIT}\` |
