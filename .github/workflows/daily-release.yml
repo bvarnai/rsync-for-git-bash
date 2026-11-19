@@ -7,6 +7,8 @@ on:
 jobs:
   Check:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     outputs:
       needs_build: ${{ steps.check.outputs.needs_build }}
       rsync_ver: ${{ steps.check.outputs.rsync_ver }}
@@ -20,12 +22,17 @@ jobs:
 
       - id: check
         shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           bash scripts/check-versions.sh
 
       - id: resolve
         if: steps.check.outputs.needs_build == 'true'
         shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           GIT_VER="${{ steps.check.outputs.git_ver }}"
           OUTPUT=$(bash ./scripts/find-sdk-commit.sh "$GIT_VER")

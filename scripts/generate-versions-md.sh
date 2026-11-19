@@ -38,8 +38,13 @@ fi
 
 # Attempt to fetch the Git commit hash using the GitHub API based on the tag
 GIT_TAG="v${GIT_VER}"
+API_TOKEN="${GITHUB_TOKEN:-${GH_TOKEN:-}}"
 # The API might return multiple results or a message if rate-limited, so we handle it carefully.
-GIT_COMMIT=$(curl -s "https://api.github.com/repos/git-for-windows/git/git/refs/tags/${GIT_TAG}" | grep -E '"sha":' | head -n 1 | sed -E 's/.*"([^"]+)".*/\1/' || echo "")
+if [[ -n "${API_TOKEN}" ]]; then
+  GIT_COMMIT=$(curl -sS -H "Authorization: Bearer ${API_TOKEN}" "https://api.github.com/repos/git-for-windows/git/git/refs/tags/${GIT_TAG}" | grep -E '"sha":' | head -n 1 | sed -E 's/.*"([^"]+)".*/\1/' || echo "")
+else
+  GIT_COMMIT=$(curl -sS "https://api.github.com/repos/git-for-windows/git/git/refs/tags/${GIT_TAG}" | grep -E '"sha":' | head -n 1 | sed -E 's/.*"([^"]+)".*/\1/' || echo "")
+fi
 
 if [[ -z "${GIT_COMMIT}" ]]; then
   GIT_COMMIT="-"

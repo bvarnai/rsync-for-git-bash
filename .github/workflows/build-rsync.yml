@@ -50,6 +50,8 @@ jobs:
             "BUILD_PREFIX='${REPO_ROOT_UNIX}/build/rsync' bash '${REPO_ROOT_UNIX}/scripts/build-rsync.sh' '${REPO_ROOT_UNIX}/deps/rsync' '${{ inputs.rsync_version }}'"
 
       - name: Generate versions
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           bash ./scripts/generate-versions-md.sh "${{ inputs.git_version }}" deps/rsync deps/git-sdk-64 RELEASE_VERSIONS.md
 
