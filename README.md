@@ -1,8 +1,4 @@
-# rsync-for-git-bash
-
-<p align="left">
-  <img src="assets/logo.png" alt="rsync + Git for Windows" height="64">
-</p>
+# <img src="assets/logo.png" height="38" alt="" align="absmiddle"> rsync-for-git-bash
 
 Unmodified upstream builds of [`rsync`](https://rsync.samba.org/) linked against the `msys-2.0.dll` runtime used by each [Git for Windows](https://gitforwindows.org/) release.
 
